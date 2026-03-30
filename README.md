@@ -212,7 +212,7 @@ Noah is built to give you all three.
 If you have questions:
 
 * Open an issue
-* Or contact via Gumroad
+* Or contact via [LinkedIn](https://www.linkedin.com/in/iamkhiem), [Email](mailto:khiemnd777@gmail.com).
 
 ---
 

@@ -11,8 +11,6 @@ The backend boot path in `api/main.go` initializes config, logging, PostgreSQL c
 
 The frontend auto-loads feature modules from `fe/src/features/**/index.tsx` through `fe/src/core/index.ts`, builds permission-guarded routes in `fe/src/app/routes.tsx`, uses shared Axios clients under `fe/src/core/network/*`, and mounts a WebSocket provider in `fe/src/app/app.tsx`.
 
-No mobile application was confirmed. No `pubspec.yaml` was found in the repository.
-
 ## 2. Tech Stack Table
 
 | Category | Technology | Version | Evidence | Purpose | Status |

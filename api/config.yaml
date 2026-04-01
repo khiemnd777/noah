@@ -1,0 +1,7 @@
+app:
+  name: "noah-api-sample"
+  description: "Minimal sample application that exercises framework startup."
+
+server:
+  host: "127.0.0.1"
+  port: 8080

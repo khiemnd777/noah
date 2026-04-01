@@ -16,6 +16,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/runtime"
 	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
 	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
@@ -23,6 +24,7 @@ import (
 
 type ModuleDeps[T any] struct {
 	Config    *T
+	DBClient  frameworkdb.Client
 	DB        *sql.DB
 	Ent       any
 	SharedEnt any
@@ -60,6 +62,10 @@ func StartModule[T any](opts ModuleOptions[T]) {
 	})
 
 	cache.InitTTLConstants()
+	if err := frameworkruntime.ConfigureDefaultCache(toFrameworkCacheConfig(config.Get().Redis)); err != nil {
+		logger.Error(fmt.Sprintf("❌ Cannot initialize framework cache: %v", err))
+		return
+	}
 
 	circuitbreaker.Init()
 
@@ -124,6 +130,7 @@ func StartModule[T any](opts ModuleOptions[T]) {
 	// Step 5: Register routes
 	deps := &ModuleDeps[T]{
 		Config:    cfg,
+		DBClient:  dbClient,
 		DB:        fiberSafeSQLDB(dbClient),
 		Ent:       entClient,
 		SharedEnt: sharedEntClient,
@@ -195,4 +202,24 @@ func fiberSafeSQLDB(client frameworkdb.Client) *sql.DB {
 		return nil
 	}
 	return sqlDB
+}
+
+func toFrameworkCacheConfig(cfg config.RedisConfig) frameworkcache.Config {
+	instances := make(map[string]frameworkcache.InstanceConfig, len(cfg.Instances))
+	for name, instance := range cfg.Instances {
+		instances[name] = frameworkcache.InstanceConfig{
+			DB:        instance.DB,
+			Host:      instance.Host,
+			Password:  instance.Password,
+			Port:      instance.Port,
+			Username:  instance.Username,
+			IsCluster: instance.IsCluster,
+			UseTLS:    instance.UseTLS,
+		}
+	}
+
+	return frameworkcache.Config{
+		DefaultInstance: "cache",
+		Instances:       instances,
+	}
 }

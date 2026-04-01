@@ -2,8 +2,8 @@
 
 ## Summary
 This run established a reusable `framework/` layer and migrated the lowest-risk backend runtime boundaries into it while keeping `api/` as the runnable application and `fe/` unchanged. The migration is intentionally incremental: the gateway now boots through framework application abstractions, cache access flows through framework cache contracts, runtime registry persistence flows through framework lifecycle contracts, and auth token pairs now come from framework public contracts.
-This follow-up consolidation moved remaining framework-worthy DB and Redis/pubsub ownership out of `api/shared/*` infrastructure packages: the public DB contract no longer leaks `database/sql`, Redis instance management now lives in framework runtime/internal adapters, and API wrappers remain only as compatibility shims.
-This phase also moved the first built-in module, observability, into framework ownership. Its handler, service, repository, model, module wiring, and module config now live under `framework/modules/observability`, while `api/modules/observability` remains only as a composition bridge for auth/middleware and startup.
+This follow-up consolidation moved remaining framework-worthy DB and Redis/pubsub ownership out of `api/shared/*` infrastructure packages: the public DB contract no longer leaks `database/sql`, Redis instance management now lives in framework runtime/internal adapters, module startup now configures framework cache runtime for framework-owned services, and API wrappers remain only as compatibility shims.
+This phase also moved the built-in observability and attribute modules into framework ownership. Their handlers, services, repositories, models, module wiring, and module config now live under `framework/modules/*`, while the corresponding `api/modules/*` trees remain only as composition bridges for auth/middleware, startup, and config mapping.
 
 ## Structural Changes
 - Added root workspace wiring with `go.work`.
@@ -30,14 +30,19 @@ This phase also moved the first built-in module, observability, into framework o
   - `framework/runtime/lifecycle.go`
 - Added the first framework-owned built-in module:
   - `framework/modules/observability/*`
+- Added the second framework-owned built-in module:
+  - `framework/modules/attribute/*`
 - Updated `api/go.mod` to consume the local framework module through `replace`.
 - Migrated backend entrypoints and shims:
   - `api/main.go`
+  - `api/modules/attribute/main.go`
+  - `api/modules/attribute/config/config.go`
   - `api/gateway/main.go`
   - `api/gateway/runtime/start.go`
   - `api/shared/auth/model.go`
   - `api/shared/cache/cache.go`
   - `api/shared/cache/invalidate.go`
+  - `api/shared/module/bootstrapper.go`
   - `api/shared/runtime/registry.go`
 - Migrated HTTP-facing API seams:
   - `api/shared/app/*`
@@ -65,9 +70,12 @@ This phase also moved the first built-in module, observability, into framework o
 - Module bootstrap still exposes concrete runtime dependencies and should be moved behind a framework module/runtime abstraction in a follow-up phase.
 - Built-in module startup still depends on API-owned composition entrypoints for coexistence-mode boot, so module process startup is not fully framework-owned yet.
 - Observability still relies on API-provided RBAC permission bridging for auth enforcement, which is acceptable for coexistence mode but should become a framework auth contract before broader built-in module migration.
+- Attribute still uses module-local raw SQL inside `framework/modules/attribute/repository` because the shared Ent schema is not yet separable from broader application entities; that is acceptable for the current DB boundary, but it should eventually be replaced by a framework-owned persistence adapter or a module-local extracted data layer.
 
 ## Validation Performed
 - `cd framework && go test ./...`
 - `cd api && GOCACHE="$PWD/.gocache" go test ./...`
 - `cd framework && GOCACHE="$PWD/.gocache" go test ./runtime ./modules/observability/...`
 - `cd api && GOCACHE="$PWD/.gocache" go test ./modules/observability/... ./shared/runtime ./scripts/module_runner/runner ./gateway/...`
+- `cd framework && GOCACHE="$PWD/.gocache" go test ./runtime ./modules/attribute/...`
+- `cd api && GOCACHE="$PWD/.gocache" go test ./modules/attribute/... ./shared/module`

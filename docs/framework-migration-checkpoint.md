@@ -12,6 +12,10 @@
 - Phase 7: Partial
 
 ### Completed This Run
+- Moved the built-in attribute module implementation out of `api/modules/attribute/*` and into `framework/modules/attribute/*`, including handler, service, repository, model, module wiring, and framework-owned module config files.
+- Replaced the attribute module's API-owned Ent repository with a framework-owned SQL repository that uses `framework/pkg/db` plus the runtime SQL bridge only inside `framework/modules/attribute/repository`.
+- Reduced `api/modules/attribute` to a composition-only shim: framework module config bridging and route/auth composition through the existing module bootstrap path.
+- Extended `api/shared/module` bootstrapping to expose the framework DB client to built-in module shims and to configure framework cache runtime for module processes before framework-owned services use cache contracts.
 - Moved the built-in observability module implementation out of `api/modules/observability/*` and into `framework/modules/observability/*`, including handler, service, repository, model, module wiring, and framework-owned module config files.
 - Reduced `api/modules/observability` to a composition-only shim: app config to framework config mapping, Ent bootstrap for RBAC permission checks, and route/middleware composition.
 - Updated module discovery/startup helpers so `framework/modules/*` owns module discovery and config lookup, while `api/modules/*` can remain composition entrypoints during coexistence.
@@ -32,6 +36,8 @@
 
 ### Validation Snapshot
 - No frontend files changed.
+- `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/attribute/...` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./modules/attribute/... ./shared/module` passed.
 - `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/observability/...` passed.
 - `api/`: `GOCACHE="$PWD/.gocache" go test ./modules/observability/... ./shared/runtime ./scripts/module_runner/runner ./gateway/...` passed.
 - `framework/`: `go test ./...` passed.
@@ -39,9 +45,10 @@
 - Backend compatibility is preserved through `api/shared/*` wrappers plus framework-backed gateway boot.
 - `framework/pkg/` no longer exposes raw `*sql.DB` or Redis client types.
 - Observability is now discovered from `framework/modules/observability` through the existing multi-root loader, with `api/modules/observability/main.go` retained only as a composition/startup bridge.
+- Attribute is now discovered from `framework/modules/attribute` through the existing multi-root loader, with `api/modules/attribute/main.go` retained only as a composition/startup bridge.
 
 ### Remaining Work
 - Complete API-side migration for module boot composition and replace remaining raw DB/Fiber bridging with stable framework-native contracts.
 - Reduce remaining Fiber-native response/body helper usage inside handler implementations by introducing stable HTTP response helpers where useful.
 - Reduce remaining direct Redis and raw SQL usage outside the newly introduced framework boundaries.
-- Repeat the same framework-owned module move for the next built-in module, then remove more API-side composition assumptions from module startup over time.
+- Move the next built-in module into framework ownership, then remove more API-side composition assumptions from module startup over time.

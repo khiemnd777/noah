@@ -6,6 +6,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type AuditLogHandler struct {
@@ -16,12 +17,12 @@ func NewAuditLogHandler(svc *service.AuditLogService) *AuditLogHandler {
 	return &AuditLogHandler{svc: svc}
 }
 
-func (h *AuditLogHandler) RegisterRoutes(router fiber.Router) {
+func (h *AuditLogHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterPost(router, "/logs", h.Create)
 	app.RouterGet(router, "", h.ListPaginated)
 }
 
-func (h *AuditLogHandler) Create(c *fiber.Ctx) error {
+func (h *AuditLogHandler) Create(c frameworkhttp.Context) error {
 	type body struct {
 		Action   string         `json:"action"`
 		Module   string         `json:"module"`
@@ -39,7 +40,7 @@ func (h *AuditLogHandler) Create(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusCreated)
 }
 
-func (h *AuditLogHandler) ListPaginated(c *fiber.Ctx) error {
+func (h *AuditLogHandler) ListPaginated(c frameworkhttp.Context) error {
 	module := utils.GetQueryAsString(c, "module")
 	targetID := utils.GetQueryAsInt64(c, "target_id")
 	page := utils.GetQueryAsInt(c, "page")

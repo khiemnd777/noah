@@ -11,6 +11,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/modules/search"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type SearchHandler struct {
@@ -22,11 +23,11 @@ func NewSearchHandler(svc service.SearchService, deps *module.ModuleDeps[config.
 	return &SearchHandler{svc: svc, deps: deps}
 }
 
-func (h *SearchHandler) RegisterRoutes(router fiber.Router) {
+func (h *SearchHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/", h.Search)
 }
 
-func (h *SearchHandler) Search(c *fiber.Ctx) error {
+func (h *SearchHandler) Search(c frameworkhttp.Context) error {
 	q := utils.GetQueryAsString(c, "q")
 	entityType := utils.GetQueryAsString(c, "entityType")
 	if entityType == "" {

@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/modules/metadata/model"
 	"github.com/khiemnd777/noah_api/modules/metadata/repository"
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type ImportFieldMappingService struct {
@@ -199,7 +199,7 @@ func (s *ImportFieldMappingService) Delete(ctx context.Context, id int) error {
 }
 
 func (s *ImportFieldMappingService) ResolveProfileAndMappings(
-	c *fiber.Ctx,
+	c frameworkhttp.Context,
 	ctx context.Context,
 	scope, code string,
 ) (*model.ImportFieldProfile, []model.ImportFieldMapping, error) {

@@ -11,6 +11,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type ProfileHandler struct {
@@ -25,7 +26,7 @@ func NewProfileHandler(svc *service.ProfileService, deps *module.ModuleDeps[conf
 	}
 }
 
-func (h *ProfileHandler) RegisterRoutes(router fiber.Router) {
+func (h *ProfileHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterPut(router, "/me/change-password", h.ChangePassword)
 	app.RouterPost(router, "/me/exists-email", h.ExistsEmail)
 	app.RouterPost(router, "/me/exists-phone", h.ExistsPhone)
@@ -35,7 +36,7 @@ func (h *ProfileHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/me", h.Delete)
 }
 
-func (h *ProfileHandler) GetProfile(c *fiber.Ctx) error {
+func (h *ProfileHandler) GetProfile(c frameworkhttp.Context) error {
 	userID, _ := utils.GetUserIDInt(c)
 	profile, err := h.svc.GetProfile(c.UserContext(), userID)
 	if err != nil {
@@ -44,7 +45,7 @@ func (h *ProfileHandler) GetProfile(c *fiber.Ctx) error {
 	return c.JSON(profile)
 }
 
-func (h *ProfileHandler) ExistsEmail(c *fiber.Ctx) error {
+func (h *ProfileHandler) ExistsEmail(c frameworkhttp.Context) error {
 	type ExistsEmailRequest struct {
 		Email string `json:"email"`
 	}
@@ -62,7 +63,7 @@ func (h *ProfileHandler) ExistsEmail(c *fiber.Ctx) error {
 	return c.JSON(existed)
 }
 
-func (h *ProfileHandler) ExistsPhone(c *fiber.Ctx) error {
+func (h *ProfileHandler) ExistsPhone(c frameworkhttp.Context) error {
 	type ExistsPhoneRequest struct {
 		Phone string `json:"phone"`
 	}
@@ -80,7 +81,7 @@ func (h *ProfileHandler) ExistsPhone(c *fiber.Ctx) error {
 	return c.JSON(existed)
 }
 
-func (h *ProfileHandler) UpdateProfile(c *fiber.Ctx) error {
+func (h *ProfileHandler) UpdateProfile(c frameworkhttp.Context) error {
 	type UpdateProfileRequest struct {
 		ID     int     `json:"id"`
 		Name   string  `json:"name"`
@@ -110,7 +111,7 @@ func (h *ProfileHandler) UpdateProfile(c *fiber.Ctx) error {
 	return c.JSON(updated)
 }
 
-func (h *ProfileHandler) ChangePassword(c *fiber.Ctx) error {
+func (h *ProfileHandler) ChangePassword(c frameworkhttp.Context) error {
 	type ChangePasswordRequest struct {
 		CurrentPassword string `json:"current_password"`
 		NewPassword     string `json:"new_password"`
@@ -130,7 +131,7 @@ func (h *ProfileHandler) ChangePassword(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusAccepted)
 }
 
-func (h *ProfileHandler) Delete(c *fiber.Ctx) error {
+func (h *ProfileHandler) Delete(c frameworkhttp.Context) error {
 	userID, _ := utils.GetUserIDInt(c)
 
 	if err := h.svc.Delete(c.UserContext(), userID); err != nil {

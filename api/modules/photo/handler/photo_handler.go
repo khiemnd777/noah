@@ -15,6 +15,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type PhotoHandler struct {
@@ -29,7 +30,7 @@ func NewPhotoHandler(svc *service.PhotoService, deps *module.ModuleDeps[config.M
 	}
 }
 
-func (h *PhotoHandler) RegisterRoutes(router fiber.Router) {
+func (h *PhotoHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterPost(router, "/", h.UploadPhoto)
 	app.RouterGet(router, "/", h.GetPhotos)
 
@@ -44,7 +45,7 @@ func (h *PhotoHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/:id", h.DeletePhoto)
 }
 
-func (h *PhotoHandler) UploadPhoto(c *fiber.Ctx) error {
+func (h *PhotoHandler) UploadPhoto(c frameworkhttp.Context) error {
 	file, err := c.FormFile("photo")
 	if err != nil {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, err, "Missing photo file")
@@ -87,7 +88,7 @@ func (h *PhotoHandler) UploadPhoto(c *fiber.Ctx) error {
 	return c.JSON(photo)
 }
 
-func (h *PhotoHandler) GetPhoto(c *fiber.Ctx) error {
+func (h *PhotoHandler) GetPhoto(c frameworkhttp.Context) error {
 	id, _ := utils.GetParamAsInt(c, "id")
 	folderID, _ := utils.GetParamAsNillableInt(c, "folder_id")
 
@@ -99,7 +100,7 @@ func (h *PhotoHandler) GetPhoto(c *fiber.Ctx) error {
 	return c.JSON(item)
 }
 
-func (h *PhotoHandler) GetPhotoByFileName(c *fiber.Ctx) error {
+func (h *PhotoHandler) GetPhotoByFileName(c frameworkhttp.Context) error {
 	filename := utils.GetParamAsString(c, "filename")
 	folderID, _ := utils.GetParamAsNillableInt(c, "folder_id")
 
@@ -111,7 +112,7 @@ func (h *PhotoHandler) GetPhotoByFileName(c *fiber.Ctx) error {
 	return c.JSON(item)
 }
 
-func (h *PhotoHandler) GetPhotos(c *fiber.Ctx) error {
+func (h *PhotoHandler) GetPhotos(c frameworkhttp.Context) error {
 	userId := utils.GetQueryAsInt(c, "user_id")
 	page := utils.GetQueryAsInt(c, "page", 1)
 	limit := utils.GetQueryAsInt(c, "limit", 20)
@@ -127,7 +128,7 @@ func (h *PhotoHandler) GetPhotos(c *fiber.Ctx) error {
 	})
 }
 
-func (h *PhotoHandler) DeletePhoto(c *fiber.Ctx) error {
+func (h *PhotoHandler) DeletePhoto(c frameworkhttp.Context) error {
 	id, _ := utils.GetParamAsInt(c, "id")
 	folderID, _ := utils.GetParamAsNillableInt(c, "folder_id")
 	userId, _ := utils.GetUserIDInt(c)
@@ -138,7 +139,7 @@ func (h *PhotoHandler) DeletePhoto(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *PhotoHandler) GetPhotoFile(c *fiber.Ctx) error {
+func (h *PhotoHandler) GetPhotoFile(c frameworkhttp.Context) error {
 	/*
 		GET /api/photo/file/abc.jpg?size=thumbnail
 		GET /api/photo/file/abc.jpg?size=medium
@@ -174,7 +175,7 @@ type DeleteManyRequest struct {
 	FolderID *int  `json:"folder_id"`
 }
 
-func (h *PhotoHandler) DeleteMany(c *fiber.Ctx) error {
+func (h *PhotoHandler) DeleteMany(c frameworkhttp.Context) error {
 	var req DeleteManyRequest
 	if err := c.BodyParser(&req); err != nil || len(req.IDs) == 0 {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, err, "Invalid request")
@@ -189,7 +190,7 @@ func (h *PhotoHandler) DeleteMany(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *PhotoHandler) BatchGet(c *fiber.Ctx) error {
+func (h *PhotoHandler) BatchGet(c frameworkhttp.Context) error {
 	var req struct {
 		IDs *[]int `json:"ids"`
 	}
@@ -219,7 +220,7 @@ type UpdateFolderRequest struct {
 	OldFolderID *int  `json:"old_folder_id"`
 }
 
-func (h *PhotoHandler) UpdateFolder(c *fiber.Ctx) error {
+func (h *PhotoHandler) UpdateFolder(c frameworkhttp.Context) error {
 	var req UpdateFolderRequest
 	if err := c.BodyParser(&req); err != nil || len(req.IDs) == 0 {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, err, "Invalid request")

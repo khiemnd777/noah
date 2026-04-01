@@ -3,7 +3,7 @@ package utils
 import (
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 const (
@@ -11,7 +11,7 @@ const (
 	minInt = -maxInt - 1
 )
 
-func GetParamAsNillableInt(c *fiber.Ctx, paramName string) (*int, error) {
+func GetParamAsNillableInt(c frameworkhttp.Context, paramName string) (*int, error) {
 	var result *int
 	if raw := c.Params(paramName); raw != "" {
 		parsed, err := strconv.Atoi(raw)
@@ -23,15 +23,15 @@ func GetParamAsNillableInt(c *fiber.Ctx, paramName string) (*int, error) {
 	return result, nil
 }
 
-func GetParamAsInt(c *fiber.Ctx, paramName string) (int, error) {
+func GetParamAsInt(c frameworkhttp.Context, paramName string) (int, error) {
 	return strconv.Atoi(c.Params(paramName))
 }
 
-func GetParamAsString(c *fiber.Ctx, paramName string) string {
+func GetParamAsString(c frameworkhttp.Context, paramName string) string {
 	return c.Params(paramName)
 }
 
-func GetQueryAsNillableInt(c *fiber.Ctx, queryName string, defaultValue ...string) (*int, error) {
+func GetQueryAsNillableInt(c frameworkhttp.Context, queryName string, defaultValue ...string) (*int, error) {
 	if raw := c.Query(queryName, defaultValue...); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 
@@ -43,7 +43,7 @@ func GetQueryAsNillableInt(c *fiber.Ctx, queryName string, defaultValue ...strin
 	return nil, nil
 }
 
-func GetQueryAsInt(c *fiber.Ctx, queryName string, defaultValue ...int) int {
+func GetQueryAsInt(c frameworkhttp.Context, queryName string, defaultValue ...int) int {
 	raw := c.Query(queryName)
 	if raw == "" {
 		if len(defaultValue) > 0 {
@@ -63,7 +63,7 @@ func GetQueryAsInt(c *fiber.Ctx, queryName string, defaultValue ...int) int {
 	return int(parsed)
 }
 
-func GetQueryAsInt64(c *fiber.Ctx, queryName string, defaultValue ...int64) int64 {
+func GetQueryAsInt64(c frameworkhttp.Context, queryName string, defaultValue ...int64) int64 {
 	raw := c.Query(queryName)
 	if raw == "" {
 		if len(defaultValue) > 0 {
@@ -83,11 +83,11 @@ func GetQueryAsInt64(c *fiber.Ctx, queryName string, defaultValue ...int64) int6
 	return parsed
 }
 
-func GetQueryAsString(c *fiber.Ctx, queryName string, defaultValue ...string) string {
+func GetQueryAsString(c frameworkhttp.Context, queryName string, defaultValue ...string) string {
 	return c.Query(queryName, defaultValue...)
 }
 
-func GetQueryAsFloat64Pointer(c *fiber.Ctx, name string) (*float64, error) {
+func GetQueryAsFloat64Pointer(c frameworkhttp.Context, name string) (*float64, error) {
 	val := c.Query(name)
 	if val == "" {
 		return nil, nil

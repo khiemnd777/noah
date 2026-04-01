@@ -1,8 +1,6 @@
 package material
 
 import (
-	"github.com/gofiber/fiber/v2"
-
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	"github.com/khiemnd777/noah_api/modules/main/features/__relation/handler"
 	_ "github.com/khiemnd777/noah_api/modules/main/features/__relation/registrar"
@@ -11,6 +9,7 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/registry"
 	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type feature struct{}
@@ -18,7 +17,7 @@ type feature struct{}
 func (feature) ID() string    { return "relation" }
 func (feature) Priority() int { return 1 }
 
-func (feature) Register(router fiber.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager) error {
+func (feature) Register(router frameworkhttp.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager) error {
 	repo := repository.NewRelationRepository()
 	svc := service.NewRelationService(repo, deps)
 	h := handler.NewRelationHandler(svc, deps)

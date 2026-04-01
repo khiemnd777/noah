@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/golang-jwt/jwt/v5"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 
 	"github.com/khiemnd777/noah_api/modules/realtime/service"
 	"github.com/khiemnd777/noah_api/shared/app"
@@ -56,79 +57,82 @@ func (h *Handler) WithHeartbeat(pongWait, pingPeriod, writeWait time.Duration) *
 	return h
 }
 
-func (h *Handler) RegisterRoutes(router fiber.Router) {
-	app.RouterGet(router, "/", websocket.New(func(c *websocket.Conn) {
-		userID, err := h.parseUserIDFromJWT(c)
-		if err != nil {
-			if errors.Is(err, ErrTokenExpired) {
-				h.closeWithReason(c, "token_expired")
-			} else {
-				h.closeWithReason(c, "token_invalid")
-			}
-			return
-		}
-
-		deptID, err := h.parseDeptIDFromJWT(c)
-		if err != nil {
-			if errors.Is(err, ErrTokenExpired) {
-				h.closeWithReason(c, "token_expired")
-			} else {
-				h.closeWithReason(c, "token_invalid")
-			}
-			return
-		}
-
-		client := &service.ClientConn{
-			UserID: userID,
-			DeptID: deptID,
-			Conn:   c,
-		}
-
-		h.hub.Register <- client
-		defer func() {
-			h.hub.Unregister <- client
-			_ = client.Close()
-		}()
-
-		// Message-level heartbeat for proxy/gateway environments
-		h.setupMessageHeartbeat(c)
-
-		stopPing := make(chan struct{})
-		defer close(stopPing)
-		go h.pingLoop(client, stopPing)
-
-		for {
-			mt, msg, err := c.ReadMessage()
+func (h *Handler) RegisterRoutes(router frameworkhttp.Router) {
+	app.RouterGet(router, "/", func(c frameworkhttp.Context) error {
+		fiberCtx := app.MustFiberContext(c)
+		return websocket.New(func(c *websocket.Conn) {
+			userID, err := h.parseUserIDFromJWT(c)
 			if err != nil {
-				break
-			}
-			if mt != websocket.TextMessage && mt != websocket.BinaryMessage {
-				continue
+				if errors.Is(err, ErrTokenExpired) {
+					h.closeWithReason(c, "token_expired")
+				} else {
+					h.closeWithReason(c, "token_invalid")
+				}
+				return
 			}
 
-			// We expect heartbeat as plain text: "pong" (and optionally client "ping")
-			if mt == websocket.TextMessage {
-				switch string(msg) {
-				case "pong":
-					// refresh read deadline (client is alive)
-					_ = c.SetReadDeadline(time.Now().Add(h.pongWait))
-					continue
-				case "ping":
-					// client-initiated ping; reply immediately
-					_ = h.writeText(client, "pong")
-					_ = c.SetReadDeadline(time.Now().Add(h.pongWait))
+			deptID, err := h.parseDeptIDFromJWT(c)
+			if err != nil {
+				if errors.Is(err, ErrTokenExpired) {
+					h.closeWithReason(c, "token_expired")
+				} else {
+					h.closeWithReason(c, "token_invalid")
+				}
+				return
+			}
+
+			client := &service.ClientConn{
+				UserID: userID,
+				DeptID: deptID,
+				Conn:   c,
+			}
+
+			h.hub.Register <- client
+			defer func() {
+				h.hub.Unregister <- client
+				_ = client.Close()
+			}()
+
+			// Message-level heartbeat for proxy/gateway environments
+			h.setupMessageHeartbeat(c)
+
+			stopPing := make(chan struct{})
+			defer close(stopPing)
+			go h.pingLoop(client, stopPing)
+
+			for {
+				mt, msg, err := c.ReadMessage()
+				if err != nil {
+					break
+				}
+				if mt != websocket.TextMessage && mt != websocket.BinaryMessage {
 					continue
 				}
-			}
 
-			// ignore other client messages for now
-			_ = msg
-		}
-	}))
+				// We expect heartbeat as plain text: "pong" (and optionally client "ping")
+				if mt == websocket.TextMessage {
+					switch string(msg) {
+					case "pong":
+						// refresh read deadline (client is alive)
+						_ = c.SetReadDeadline(time.Now().Add(h.pongWait))
+						continue
+					case "ping":
+						// client-initiated ping; reply immediately
+						_ = h.writeText(client, "pong")
+						_ = c.SetReadDeadline(time.Now().Add(h.pongWait))
+						continue
+					}
+				}
+
+				// ignore other client messages for now
+				_ = msg
+			}
+		})(fiberCtx)
+	})
 }
 
-func (h *Handler) RegisterInternalRoutes(router fiber.Router) {
-	app.RouterPost(router, "/internal/send", func(c *fiber.Ctx) error {
+func (h *Handler) RegisterInternalRoutes(router frameworkhttp.Router) {
+	app.RouterPost(router, "/internal/send", func(c frameworkhttp.Context) error {
 		var req struct {
 			UserID  int                             `json:"user_id"`
 			Message realtime_model.RealtimeEnvelope `json:"message"`

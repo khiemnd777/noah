@@ -2,6 +2,7 @@ package fiber
 
 import (
 	"context"
+	"mime/multipart"
 
 	"github.com/gofiber/fiber/v2"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
@@ -39,8 +40,16 @@ func (r *Router) All(path string, handlers ...frameworkhttp.Handler) {
 	r.router.All(path, wrapHandlers(handlers)...)
 }
 
+func (r *Router) Add(method, path string, handlers ...frameworkhttp.Handler) {
+	r.router.Add(method, path, wrapHandlers(handlers)...)
+}
+
 func (r *Router) Group(prefix string) frameworkhttp.Router {
 	return &Router{router: r.router.Group(prefix)}
+}
+
+func (r *Router) Mount(prefix string, handlers ...frameworkhttp.Handler) frameworkhttp.Router {
+	return &Router{router: r.router.Group(prefix, wrapHandlers(handlers)...)}
 }
 
 func (r *Router) Use(path string, handlers ...frameworkhttp.Handler) {
@@ -52,19 +61,43 @@ func (r *Router) Use(path string, handlers ...frameworkhttp.Handler) {
 	r.router.Use(args...)
 }
 
-func (c *Context) Get(key string) string {
-	return c.ctx.Get(key)
+func (r *Router) Route(prefix string, fn func(frameworkhttp.Router)) {
+	fn(&Router{router: r.router.Group(prefix)})
 }
 
-func (c *Context) Locals(key string, value ...any) any {
+func (c *Context) Get(key string, defaultValue ...string) string {
+	return c.ctx.Get(key, defaultValue...)
+}
+
+func (c *Context) BodyParser(out any) error {
+	return c.ctx.BodyParser(out)
+}
+
+func (c *Context) Body() []byte {
+	return c.ctx.Body()
+}
+
+func (c *Context) FormFile(key string) (*multipart.FileHeader, error) {
+	return c.ctx.FormFile(key)
+}
+
+func (c *Context) FormValue(key string, defaultValue ...string) string {
+	return c.ctx.FormValue(key, defaultValue...)
+}
+
+func (c *Context) Locals(key any, value ...any) any {
 	if len(value) > 0 {
 		c.ctx.Locals(key, value[0])
 	}
 	return c.ctx.Locals(key)
 }
 
-func (c *Context) Method() string {
-	return c.ctx.Method()
+func (c *Context) Method(override ...string) string {
+	return c.ctx.Method(override...)
+}
+
+func (c *Context) Next() error {
+	return c.ctx.Next()
 }
 
 func (c *Context) Path() string {
@@ -73,6 +106,26 @@ func (c *Context) Path() string {
 
 func (c *Context) Param(name string) string {
 	return c.ctx.Params(name)
+}
+
+func (c *Context) Params(name string, defaultValue ...string) string {
+	return c.ctx.Params(name, defaultValue...)
+}
+
+func (c *Context) ParamsInt(name string) (int, error) {
+	return c.ctx.ParamsInt(name)
+}
+
+func (c *Context) Query(name string, defaultValue ...string) string {
+	return c.ctx.Query(name, defaultValue...)
+}
+
+func (c *Context) QueryBool(name string, defaultValue ...bool) bool {
+	return c.ctx.QueryBool(name, defaultValue...)
+}
+
+func (c *Context) QueryInt(name string, defaultValue ...int) int {
+	return c.ctx.QueryInt(name, defaultValue...)
 }
 
 func (c *Context) Header(name string) string {
@@ -99,6 +152,10 @@ func (c *Context) SendStatus(status int) error {
 	return c.ctx.SendStatus(status)
 }
 
+func (c *Context) SendFile(path string, compress ...bool) error {
+	return c.ctx.SendFile(path, compress...)
+}
+
 func (c *Context) SendString(value string) error {
 	return c.ctx.SendString(value)
 }
@@ -108,8 +165,8 @@ func (c *Context) Status(status int) frameworkhttp.Context {
 	return c
 }
 
-func (c *Context) JSON(value any) error {
-	return c.ctx.JSON(value)
+func (c *Context) JSON(value any, ctype ...string) error {
+	return c.ctx.JSON(value, ctype...)
 }
 
 func (c *Context) Set(key, value string) {
@@ -118,6 +175,14 @@ func (c *Context) Set(key, value string) {
 
 func (c *Context) SetUserValue(key string, value any) {
 	c.ctx.SetUserContext(context.WithValue(c.ctx.UserContext(), key, value))
+}
+
+func (c *Context) SetUserContext(ctx context.Context) {
+	c.ctx.SetUserContext(ctx)
+}
+
+func (c *Context) UserContext() context.Context {
+	return c.ctx.UserContext()
 }
 
 func (c *Context) UserValue(key string) any {

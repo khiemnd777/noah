@@ -1,19 +1,20 @@
 package middleware
 
 import (
+	stdhttp "net/http"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
-func RequireAuth() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func RequireAuth() frameworkhttp.Handler {
+	return func(c frameworkhttp.Context) error {
 		header := c.Get("Authorization")
 		if header == "" || !strings.HasPrefix(header, "Bearer ") {
-			return client_error.ResponseError(c, fiber.StatusUnauthorized, nil, "Missing or invalid Authorization header")
+			return client_error.ResponseError(c, stdhttp.StatusUnauthorized, nil, "Missing or invalid Authorization header")
 		}
 
 		tokenStr := strings.TrimPrefix(header, "Bearer ")
@@ -21,7 +22,7 @@ func RequireAuth() fiber.Handler {
 		claims, ok, err := utils.GetJWTClaims(c)
 
 		if !ok || err != nil {
-			return client_error.ResponseError(c, fiber.StatusUnauthorized, err, "Invalid token claims")
+			return client_error.ResponseError(c, stdhttp.StatusUnauthorized, err, "Invalid token claims")
 		}
 
 		c.Locals("userID", int(claims["user_id"].(float64)))
@@ -39,9 +40,9 @@ func RequireAuth() fiber.Handler {
 	}
 }
 
-func RequireInternal() fiber.Handler {
+func RequireInternal() frameworkhttp.Handler {
 	// Only use for internal audit, trace, impersonate, và trust-based routing.
-	return func(c *fiber.Ctx) error {
+	return func(c frameworkhttp.Context) error {
 		token := c.Get("X-Internal-Token")
 		baseIntrTkn := utils.GetInternalToken()
 		if token != baseIntrTkn {

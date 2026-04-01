@@ -1,10 +1,11 @@
 package search
 
 import (
-	"github.com/gofiber/fiber/v2"
+	appbridge "github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/modules/search/model"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 var guardRegistry = map[string]Guard{}
@@ -13,7 +14,7 @@ func RegisterGuard(entityType string, g Guard) {
 	guardRegistry[entityType] = g
 }
 
-func GuardSearch(c *fiber.Ctx, dbEnt *generated.Client, in []model.Row) []model.Row {
+func GuardSearch(c frameworkhttp.Context, dbEnt *generated.Client, in []model.Row) []model.Row {
 	if len(in) == 0 {
 		return in
 	}
@@ -23,7 +24,7 @@ func GuardSearch(c *fiber.Ctx, dbEnt *generated.Client, in []model.Row) []model.
 	perms, _ := utils.GetPermSetFromClaims(c)
 
 	ctx := GuardCtx{
-		Ctx:    c,
+		Ctx:    appbridge.MustFiberContext(c),
 		DB:     dbEnt,
 		UserID: userID,
 		DeptID: deptID,

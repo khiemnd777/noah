@@ -2,12 +2,13 @@ package client_error
 
 import (
 	"fmt"
+	stdhttp "net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/shared/logger"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type ErrorResponse struct {
@@ -34,9 +35,9 @@ func callerLocation(skip int) string {
 	)
 }
 
-func ResponseError(c *fiber.Ctx, statusCode int, err error, extraMessage ...string) error {
+func ResponseError(c frameworkhttp.Context, statusCode int, err error, extraMessage ...string) error {
 	message := "Server error"
-	if statusCode >= fiber.StatusBadRequest && statusCode < fiber.StatusInternalServerError {
+	if statusCode >= stdhttp.StatusBadRequest && statusCode < stdhttp.StatusInternalServerError {
 		message = "Client error"
 	}
 
@@ -50,7 +51,7 @@ func ResponseError(c *fiber.Ctx, statusCode int, err error, extraMessage ...stri
 
 	location := callerLocation(1)
 	logMessage := fmt.Sprintf("%s | at %s", message, location)
-	if statusCode >= fiber.StatusInternalServerError {
+	if statusCode >= stdhttp.StatusInternalServerError {
 		logger.ErrorContext(c.UserContext(), logMessage, "status_code", statusCode, "error", err)
 	} else {
 		logger.WarnContext(c.UserContext(), logMessage, "status_code", statusCode, "error", err)
@@ -70,7 +71,7 @@ type UnexpectedResponse struct {
 	Message   string `json:"statusMessage"`
 }
 
-func ResponseServiceMessage(c *fiber.Ctx, statusCode int, errorCode string, extraMessage ...string) error {
+func ResponseServiceMessage(c frameworkhttp.Context, statusCode int, errorCode string, extraMessage ...string) error {
 	message := "Service message"
 	if len(extraMessage) > 0 && extraMessage[0] != "" {
 		message = extraMessage[0]
@@ -80,5 +81,5 @@ func ResponseServiceMessage(c *fiber.Ctx, statusCode int, errorCode string, extr
 		ErrorCode: errorCode,
 		Message:   message,
 	}
-	return c.Status(fiber.StatusOK).JSON(errResp)
+	return c.Status(stdhttp.StatusOK).JSON(errResp)
 }

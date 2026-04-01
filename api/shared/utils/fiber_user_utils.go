@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 // GetUserID returns user ID from Fiber context as string (supports int, int64, string)
-func GetUserID(c *fiber.Ctx) (string, bool) {
+func GetUserID(c frameworkhttp.Context) (string, bool) {
 	val := c.Locals("userID")
 	switch v := val.(type) {
 	case string:
@@ -23,7 +23,7 @@ func GetUserID(c *fiber.Ctx) (string, bool) {
 }
 
 // GetUserIDInt returns user ID as int from Fiber context (fallback 0)
-func GetUserIDInt(c *fiber.Ctx) (int, bool) {
+func GetUserIDInt(c frameworkhttp.Context) (int, bool) {
 	val := c.Locals("userID")
 	switch v := val.(type) {
 	case int:
@@ -39,7 +39,7 @@ func GetUserIDInt(c *fiber.Ctx) (int, bool) {
 	return 0, false
 }
 
-func GetDeptIDInt(c *fiber.Ctx) (int, bool) {
+func GetDeptIDInt(c frameworkhttp.Context) (int, bool) {
 	val := c.Locals("deptID")
 	switch v := val.(type) {
 	case int:
@@ -56,7 +56,7 @@ func GetDeptIDInt(c *fiber.Ctx) (int, bool) {
 }
 
 // GetUserRole returns the user's role from context (assumed string)
-func GetUserRole(c *fiber.Ctx) string {
+func GetUserRole(c frameworkhttp.Context) string {
 	if role, ok := c.Locals("role").(string); ok {
 		return role
 	}
@@ -64,7 +64,7 @@ func GetUserRole(c *fiber.Ctx) string {
 }
 
 // GetUserEmail returns the user's email from context (assumed string)
-func GetUserEmail(c *fiber.Ctx) string {
+func GetUserEmail(c frameworkhttp.Context) string {
 	if email, ok := c.Locals("email").(string); ok {
 		return email
 	}
@@ -72,7 +72,7 @@ func GetUserEmail(c *fiber.Ctx) string {
 }
 
 // GetUserWithPermission returns both user ID and permission from context
-func GetUserWithPermission(c *fiber.Ctx) (string, string) {
+func GetUserWithPermission(c frameworkhttp.Context) (string, string) {
 	userID, _ := GetUserID(c)
 	perm := ""
 	if p, ok := c.Locals("permission").(string); ok {

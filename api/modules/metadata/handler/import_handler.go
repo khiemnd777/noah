@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/khiemnd777/noah_api/modules/metadata/config"
@@ -23,12 +24,12 @@ func NewImportHandler(engine *service.ImportEngine, deps *module.ModuleDeps[conf
 	return &ImportHandler{engine: engine, deps: deps}
 }
 
-func (h *ImportHandler) RegisterRoutes(r fiber.Router) {
+func (h *ImportHandler) RegisterRoutes(r frameworkhttp.Router) {
 	// POST /metadata/import?scope=clinics&code=...
 	app.RouterPost(r, "/import", h.Import)
 }
 
-func (h *ImportHandler) Import(c *fiber.Ctx) error {
+func (h *ImportHandler) Import(c frameworkhttp.Context) error {
 	scope := c.Query("scope")
 	code := c.Query("code")
 	if scope == "" {

@@ -12,6 +12,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type FolderHandler struct {
@@ -26,7 +27,7 @@ func NewFolderHandler(svc *service.FolderService, deps *module.ModuleDeps[config
 	}
 }
 
-func (h *FolderHandler) RegisterRoutes(router fiber.Router) {
+func (h *FolderHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterPost(router, "/", h.Create)
 	app.RouterGet(router, "/", h.List)
 	app.RouterGet(router, "/:id", h.Get)
@@ -34,7 +35,7 @@ func (h *FolderHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/:id", h.Delete)
 }
 
-func (h *FolderHandler) Create(c *fiber.Ctx) error {
+func (h *FolderHandler) Create(c frameworkhttp.Context) error {
 	var input generated.Folder
 	if err := c.BodyParser(&input); err != nil {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, err, "Invalid input")
@@ -47,7 +48,7 @@ func (h *FolderHandler) Create(c *fiber.Ctx) error {
 	return c.JSON(folder)
 }
 
-func (h *FolderHandler) Get(c *fiber.Ctx) error {
+func (h *FolderHandler) Get(c frameworkhttp.Context) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	userId, _ := utils.GetUserIDInt(c)
 	folder, err := h.svc.Get(c.UserContext(), id, userId)
@@ -57,7 +58,7 @@ func (h *FolderHandler) Get(c *fiber.Ctx) error {
 	return c.JSON(folder)
 }
 
-func (h *FolderHandler) List(c *fiber.Ctx) error {
+func (h *FolderHandler) List(c frameworkhttp.Context) error {
 	userId, _ := strconv.Atoi(c.Query("user_id"))
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
@@ -72,7 +73,7 @@ func (h *FolderHandler) List(c *fiber.Ctx) error {
 	})
 }
 
-func (h *FolderHandler) Update(c *fiber.Ctx) error {
+func (h *FolderHandler) Update(c frameworkhttp.Context) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	var input generated.Folder
 	if err := c.BodyParser(&input); err != nil {
@@ -86,7 +87,7 @@ func (h *FolderHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(updated)
 }
 
-func (h *FolderHandler) Delete(c *fiber.Ctx) error {
+func (h *FolderHandler) Delete(c frameworkhttp.Context) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	userId, _ := utils.GetUserIDInt(c)
 	if err := h.svc.Delete(c.UserContext(), id, userId); err != nil {

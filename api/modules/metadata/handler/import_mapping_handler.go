@@ -13,6 +13,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type ImportFieldMappingHandler struct {
@@ -27,7 +28,7 @@ func NewImportFieldMappingHandler(
 	return &ImportFieldMappingHandler{svc: svc, deps: deps}
 }
 
-func (h *ImportFieldMappingHandler) RegisterRoutes(r fiber.Router) {
+func (h *ImportFieldMappingHandler) RegisterRoutes(r frameworkhttp.Router) {
 	app.RouterGet(r, "/import-mappings", h.ListByProfile)
 	app.RouterPost(r, "/import-mappings", h.Create)
 	app.RouterGet(r, "/import-mappings/:id", h.Get)
@@ -35,12 +36,12 @@ func (h *ImportFieldMappingHandler) RegisterRoutes(r fiber.Router) {
 	app.RouterDelete(r, "/import-mappings/:id", h.Delete)
 }
 
-func (h *ImportFieldMappingHandler) guard(c *fiber.Ctx) error {
+func (h *ImportFieldMappingHandler) guard(c frameworkhttp.Context) error {
 	return rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata")
 }
 
 // GET /import-mappings?profile_id=1
-func (h *ImportFieldMappingHandler) ListByProfile(c *fiber.Ctx) error {
+func (h *ImportFieldMappingHandler) ListByProfile(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -58,7 +59,7 @@ func (h *ImportFieldMappingHandler) ListByProfile(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": out})
 }
 
-func (h *ImportFieldMappingHandler) Get(c *fiber.Ctx) error {
+func (h *ImportFieldMappingHandler) Get(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -75,7 +76,7 @@ func (h *ImportFieldMappingHandler) Get(c *fiber.Ctx) error {
 	return c.JSON(out)
 }
 
-func (h *ImportFieldMappingHandler) Create(c *fiber.Ctx) error {
+func (h *ImportFieldMappingHandler) Create(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -92,7 +93,7 @@ func (h *ImportFieldMappingHandler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(out)
 }
 
-func (h *ImportFieldMappingHandler) Update(c *fiber.Ctx) error {
+func (h *ImportFieldMappingHandler) Update(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -114,7 +115,7 @@ func (h *ImportFieldMappingHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(out)
 }
 
-func (h *ImportFieldMappingHandler) Delete(c *fiber.Ctx) error {
+func (h *ImportFieldMappingHandler) Delete(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}

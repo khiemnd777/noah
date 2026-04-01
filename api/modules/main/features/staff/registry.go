@@ -1,7 +1,6 @@
 package staff
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	"github.com/khiemnd777/noah_api/modules/main/features/staff/handler"
 	"github.com/khiemnd777/noah_api/modules/main/features/staff/repository"
@@ -10,6 +9,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type feature struct{}
@@ -17,7 +17,7 @@ type feature struct{}
 func (feature) ID() string    { return "staff" }
 func (feature) Priority() int { return 60 }
 
-func (feature) Register(router fiber.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager) error {
+func (feature) Register(router frameworkhttp.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager) error {
 	repo := repository.NewStaffRepository(deps.Ent.(*generated.Client), deps, cfMgr)
 	svc := service.NewStaffService(repo, deps, cfMgr)
 	h := handler.NewStaffHandler(svc, deps)

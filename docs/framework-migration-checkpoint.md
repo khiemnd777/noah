@@ -20,6 +20,9 @@
 - Migrated `api/shared/db` to construct database clients through framework DB runtime factories while preserving the existing `GetSQL()` bridge for application-mode compatibility.
 - Migrated `api/shared/runtime` storage operations to consume framework lifecycle abstractions through compatibility shims.
 - Migrated `api/shared/auth` token pair type to the framework contract.
+- Migrated HTTP seam helpers in `api/shared/app` and `api/shared/middleware` to `framework/pkg/http` contracts while keeping Fiber-specific behavior behind compatibility bridges.
+- Converted module handler and registry signatures from `fiber.Router` / `*fiber.Ctx` to `framework/pkg/http.Router` / `framework/pkg/http.Context` without changing business logic.
+- Moved gateway reverse-proxy registration onto the framework router abstraction and kept websocket upgrade bridging inside adapter code only.
 
 ### Validation Snapshot
 - No frontend files changed.
@@ -29,5 +32,5 @@
 
 ### Remaining Work
 - Complete API-side migration for module boot composition and replace remaining raw DB/Fiber bridging with stable framework-native contracts.
-- Remove remaining direct Fiber usage from feature and middleware layers through adapter-oriented follow-up tasks.
+- Reduce remaining Fiber-native response/body helper usage inside handler implementations by introducing stable HTTP response helpers where useful.
 - Reduce remaining direct Redis and raw SQL usage outside the newly introduced framework boundaries.

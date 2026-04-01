@@ -5,16 +5,16 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type Registrar interface {
 	ID() string
 	Priority() int // smaller = earlier
-	Register(r fiber.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager) error
+	Register(r frameworkhttp.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager) error
 }
 
 var (
@@ -35,7 +35,7 @@ type InitOptions struct {
 	EnabledIDs []string // if empty => enable all
 }
 
-func Init(r fiber.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager, opts InitOptions) {
+func Init(r frameworkhttp.Router, deps *module.ModuleDeps[config.ModuleConfig], cfMgr *customfields.Manager, opts InitOptions) {
 	mu.RLock()
 	defer mu.RUnlock()
 

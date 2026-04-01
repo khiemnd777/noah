@@ -3,13 +3,13 @@ package middleware
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/khiemnd777/noah_api/shared/logger"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
-func AttachRequestContext() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func AttachRequestContext() frameworkhttp.Handler {
+	return func(c frameworkhttp.Context) error {
 		requestID := strings.TrimSpace(c.Get("X-Request-ID"))
 		if requestID == "" {
 			requestID = uuid.NewString()

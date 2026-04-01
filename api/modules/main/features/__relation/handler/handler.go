@@ -13,6 +13,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
 	"github.com/khiemnd777/noah_api/shared/utils/table"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type RelationHandler struct {
@@ -24,14 +25,14 @@ func NewRelationHandler(svc *service.RelationService, deps *module.ModuleDeps[co
 	return &RelationHandler{svc: svc, deps: deps}
 }
 
-func (h *RelationHandler) RegisterRoutes(router fiber.Router) {
+func (h *RelationHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/:dept_id<int>/relation/:key/:main_id<int>/one", h.Get1)
 	app.RouterGet(router, "/:dept_id<int>/relation/:key/:main_id<int>/1n/list", h.List1N)
 	app.RouterGet(router, "/:dept_id<int>/relation/:key/:main_id<int>/m2m/list", h.ListM2M)
 	app.RouterGet(router, "/:dept_id<int>/relation/:key/search", h.Search)
 }
 
-func (h *RelationHandler) Get1(c *fiber.Ctx) error {
+func (h *RelationHandler) Get1(c frameworkhttp.Context) error {
 	key := c.Params("key")
 	if key == "" {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, nil, "missing key or ref")
@@ -64,7 +65,7 @@ func (h *RelationHandler) Get1(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (h *RelationHandler) List1N(c *fiber.Ctx) error {
+func (h *RelationHandler) List1N(c frameworkhttp.Context) error {
 	key := c.Params("key")
 	if key == "" {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, nil, "missing key or ref")
@@ -96,7 +97,7 @@ func (h *RelationHandler) List1N(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (h *RelationHandler) ListM2M(c *fiber.Ctx) error {
+func (h *RelationHandler) ListM2M(c frameworkhttp.Context) error {
 	key := c.Params("key")
 	if key == "" {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, nil, "missing key or ref")
@@ -128,7 +129,7 @@ func (h *RelationHandler) ListM2M(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (h *RelationHandler) Search(c *fiber.Ctx) error {
+func (h *RelationHandler) Search(c frameworkhttp.Context) error {
 	key := c.Params("key")
 	if key == "" {
 		return client_error.ResponseError(c, fiber.StatusBadRequest, nil, "missing key or ref")

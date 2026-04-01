@@ -2,12 +2,13 @@ package utils
 
 import (
 	"errors"
+	stdhttp "net/http"
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type JWTTokenPayload struct {
@@ -32,11 +33,11 @@ func GenerateJWTToken(secret string, payload JWTTokenPayload) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
-func GetJWTClaims(c *fiber.Ctx) (jwt.MapClaims, bool, error) {
+func GetJWTClaims(c frameworkhttp.Context) (jwt.MapClaims, bool, error) {
 	secret := GetAuthSecret()
 	header := c.Get("Authorization")
 	if header == "" || !strings.HasPrefix(header, "Bearer ") {
-		return nil, false, client_error.ResponseError(c, fiber.StatusUnauthorized, nil, "Missing or invalid Authorization header")
+		return nil, false, client_error.ResponseError(c, stdhttp.StatusUnauthorized, nil, "Missing or invalid Authorization header")
 	}
 
 	tokenStr := strings.TrimPrefix(header, "Bearer ")
@@ -47,18 +48,18 @@ func GetJWTClaims(c *fiber.Ctx) (jwt.MapClaims, bool, error) {
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {
-		return nil, false, client_error.ResponseError(c, fiber.StatusUnauthorized, err, "Invalid or expired token")
+		return nil, false, client_error.ResponseError(c, stdhttp.StatusUnauthorized, err, "Invalid or expired token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || claims["user_id"] == nil {
-		return nil, false, client_error.ResponseError(c, fiber.StatusUnauthorized, err, "Invalid token claims")
+		return nil, false, client_error.ResponseError(c, stdhttp.StatusUnauthorized, err, "Invalid token claims")
 	}
 
 	return claims, true, nil
 }
 
-func GetPermSetFromClaims(c *fiber.Ctx) (map[string]struct{}, bool) {
+func GetPermSetFromClaims(c frameworkhttp.Context) (map[string]struct{}, bool) {
 	if v := c.Locals("permSet"); v != nil {
 		switch vv := v.(type) {
 		case map[string]struct{}:

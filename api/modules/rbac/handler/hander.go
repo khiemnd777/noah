@@ -15,6 +15,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/utils"
 	"github.com/khiemnd777/noah_api/shared/utils/table"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type RBACHandler struct {
@@ -50,7 +51,7 @@ type matrixDeltaReq struct {
 	PermIDs []int `json:"perm_ids"`
 }
 
-func (h *RBACHandler) RegisterRoutes(router fiber.Router) {
+func (h *RBACHandler) RegisterRoutes(router frameworkhttp.Router) {
 	// Role
 	app.RouterGet(router, "/roles/me", h.ListRolesOfMe)
 	app.RouterPost(router, "/roles", h.CreateRole)
@@ -78,7 +79,7 @@ func (h *RBACHandler) RegisterRoutes(router fiber.Router) {
 }
 
 // ---------- Handlers (all require rbac.manage)
-func (h *RBACHandler) CreateRole(c *fiber.Ctx) error {
+func (h *RBACHandler) CreateRole(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -94,7 +95,7 @@ func (h *RBACHandler) CreateRole(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"id": id})
 }
 
-func (h *RBACHandler) RenameRole(c *fiber.Ctx) error {
+func (h *RBACHandler) RenameRole(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -112,7 +113,7 @@ func (h *RBACHandler) RenameRole(c *fiber.Ctx) error {
 	return c.SendStatus(http.StatusOK)
 }
 
-func (h *RBACHandler) UpdateRole(c *fiber.Ctx) error {
+func (h *RBACHandler) UpdateRole(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -130,7 +131,7 @@ func (h *RBACHandler) UpdateRole(c *fiber.Ctx) error {
 	return c.SendStatus(http.StatusOK)
 }
 
-func (h *RBACHandler) GetRole(c *fiber.Ctx) error {
+func (h *RBACHandler) GetRole(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -145,7 +146,7 @@ func (h *RBACHandler) GetRole(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *RBACHandler) DeleteRole(c *fiber.Ctx) error {
+func (h *RBACHandler) DeleteRole(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -159,7 +160,7 @@ func (h *RBACHandler) DeleteRole(c *fiber.Ctx) error {
 	return c.SendStatus(http.StatusOK)
 }
 
-func (h *RBACHandler) ListRoles(c *fiber.Ctx) error {
+func (h *RBACHandler) ListRoles(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -171,7 +172,7 @@ func (h *RBACHandler) ListRoles(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(data)
 }
 
-func (h *RBACHandler) ListRolesByUserID(c *fiber.Ctx) error {
+func (h *RBACHandler) ListRolesByUserID(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -184,7 +185,7 @@ func (h *RBACHandler) ListRolesByUserID(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(data)
 }
 
-func (h *RBACHandler) SearchRoles(c *fiber.Ctx) error {
+func (h *RBACHandler) SearchRoles(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -197,7 +198,7 @@ func (h *RBACHandler) SearchRoles(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(data)
 }
 
-func (h *RBACHandler) ListRolesOfMe(c *fiber.Ctx) error {
+func (h *RBACHandler) ListRolesOfMe(c frameworkhttp.Context) error {
 	limit, offset := parsePaging(c, 50, 0)
 	userID, _ := utils.GetUserIDInt(c)
 	data, err := h.svc.ListUserRoles(c.UserContext(), userID, limit, offset)
@@ -207,7 +208,7 @@ func (h *RBACHandler) ListRolesOfMe(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(data)
 }
 
-func (h *RBACHandler) CreatePermission(c *fiber.Ctx) error {
+func (h *RBACHandler) CreatePermission(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -222,7 +223,7 @@ func (h *RBACHandler) CreatePermission(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"id": id})
 }
 
-func (h *RBACHandler) DeletePermission(c *fiber.Ctx) error {
+func (h *RBACHandler) DeletePermission(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -236,7 +237,7 @@ func (h *RBACHandler) DeletePermission(c *fiber.Ctx) error {
 	return c.SendStatus(http.StatusOK)
 }
 
-func (h *RBACHandler) ListPermissions(c *fiber.Ctx) error {
+func (h *RBACHandler) ListPermissions(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -249,7 +250,7 @@ func (h *RBACHandler) ListPermissions(c *fiber.Ctx) error {
 }
 
 // ---- Matrix
-func (h *RBACHandler) ReplaceRolePermissions(c *fiber.Ctx) error {
+func (h *RBACHandler) ReplaceRolePermissions(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -262,7 +263,7 @@ func (h *RBACHandler) ReplaceRolePermissions(c *fiber.Ctx) error {
 	}
 	return c.SendStatus(http.StatusOK)
 }
-func (h *RBACHandler) AddRolePermissions(c *fiber.Ctx) error {
+func (h *RBACHandler) AddRolePermissions(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -275,7 +276,7 @@ func (h *RBACHandler) AddRolePermissions(c *fiber.Ctx) error {
 	}
 	return c.SendStatus(http.StatusOK)
 }
-func (h *RBACHandler) RemoveRolePermissions(c *fiber.Ctx) error {
+func (h *RBACHandler) RemoveRolePermissions(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -288,7 +289,7 @@ func (h *RBACHandler) RemoveRolePermissions(c *fiber.Ctx) error {
 	}
 	return c.SendStatus(http.StatusOK)
 }
-func (h *RBACHandler) GetRolePermissions(c *fiber.Ctx) error {
+func (h *RBACHandler) GetRolePermissions(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -306,7 +307,7 @@ func (h *RBACHandler) GetRolePermissions(c *fiber.Ctx) error {
 		"perm_ids": ids,
 	})
 }
-func (h *RBACHandler) GetRolePermissionMatrix(c *fiber.Ctx) error {
+func (h *RBACHandler) GetRolePermissionMatrix(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -367,7 +368,7 @@ func (h *RBACHandler) GetRolePermissionMatrix(c *fiber.Ctx) error {
 //	    }
 //	  ]
 //	}
-func (h *RBACHandler) GetMyPermissionMatrix(c *fiber.Ctx) error {
+func (h *RBACHandler) GetMyPermissionMatrix(c frameworkhttp.Context) error {
 	userID, ok := utils.GetUserIDInt(c)
 	if !ok || userID <= 0 {
 		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
@@ -378,7 +379,7 @@ func (h *RBACHandler) GetMyPermissionMatrix(c *fiber.Ctx) error {
 	}
 	return c.JSON(matrix)
 }
-func (h *RBACHandler) GetUserPermissionMatrix(c *fiber.Ctx) error {
+func (h *RBACHandler) GetUserPermissionMatrix(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.db, "rbac.manage"); err != nil {
 		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -393,7 +394,7 @@ func (h *RBACHandler) GetUserPermissionMatrix(c *fiber.Ctx) error {
 	return c.JSON(matrix)
 }
 
-func (h *RBACHandler) GetMatrix(c *fiber.Ctx) error {
+func (h *RBACHandler) GetMatrix(c frameworkhttp.Context) error {
 	userID, ok := utils.GetUserIDInt(c)
 	if !ok || userID <= 0 {
 		return client_error.ResponseError(c, fiber.StatusUnauthorized, nil, "Unauthorized")
@@ -406,7 +407,7 @@ func (h *RBACHandler) GetMatrix(c *fiber.Ctx) error {
 }
 
 // ---- utils
-func parsePaging(c *fiber.Ctx, defLimit, defOffset int) (int, int) {
+func parsePaging(c frameworkhttp.Context, defLimit, defOffset int) (int, int) {
 	limit := utils.GetQueryAsInt(c, "limit", defLimit)
 	offset := utils.GetQueryAsInt(c, "offset", defOffset)
 	if limit <= 0 {

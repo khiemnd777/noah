@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	model "github.com/khiemnd777/noah_api/modules/main/features/__model"
@@ -25,7 +26,7 @@ func NewStaffHandler(svc service.StaffService, deps *module.ModuleDeps[config.Mo
 	return &StaffHandler{svc: svc, deps: deps}
 }
 
-func (h *StaffHandler) RegisterRoutes(router fiber.Router) {
+func (h *StaffHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/:dept_id<int>/staff/list", h.List)
 	app.RouterGet(router, "/:dept_id<int>/staff/search", h.Search)
 	app.RouterGet(router, "/:dept_id<int>/staff/role/:role_name/search", h.SearchWithRoleName)
@@ -41,7 +42,7 @@ func (h *StaffHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/:dept_id<int>/staff/:id<int>", h.Delete)
 }
 
-func (h *StaffHandler) List(c *fiber.Ctx) error {
+func (h *StaffHandler) List(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -54,7 +55,7 @@ func (h *StaffHandler) List(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *StaffHandler) ListByRoleName(c *fiber.Ctx) error {
+func (h *StaffHandler) ListByRoleName(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -67,7 +68,7 @@ func (h *StaffHandler) ListByRoleName(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *StaffHandler) Search(c *fiber.Ctx) error {
+func (h *StaffHandler) Search(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -79,7 +80,7 @@ func (h *StaffHandler) Search(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *StaffHandler) SearchWithRoleName(c *fiber.Ctx) error {
+func (h *StaffHandler) SearchWithRoleName(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -92,7 +93,7 @@ func (h *StaffHandler) SearchWithRoleName(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *StaffHandler) GetByID(c *fiber.Ctx) error {
+func (h *StaffHandler) GetByID(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -108,7 +109,7 @@ func (h *StaffHandler) GetByID(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto)
 }
 
-func (h *StaffHandler) ExistsEmail(c *fiber.Ctx) error {
+func (h *StaffHandler) ExistsEmail(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -135,7 +136,7 @@ func (h *StaffHandler) ExistsEmail(c *fiber.Ctx) error {
 		JSON(existed)
 }
 
-func (h *StaffHandler) ExistsPhone(c *fiber.Ctx) error {
+func (h *StaffHandler) ExistsPhone(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.view"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -162,7 +163,7 @@ func (h *StaffHandler) ExistsPhone(c *fiber.Ctx) error {
 		JSON(existed)
 }
 
-func (h *StaffHandler) Create(c *fiber.Ctx) error {
+func (h *StaffHandler) Create(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.create"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -183,7 +184,7 @@ func (h *StaffHandler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(dto)
 }
 
-func (h *StaffHandler) Update(c *fiber.Ctx) error {
+func (h *StaffHandler) Update(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.update"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -207,7 +208,7 @@ func (h *StaffHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto)
 }
 
-func (h *StaffHandler) AssignStaffToDepartment(c *fiber.Ctx) error {
+func (h *StaffHandler) AssignStaffToDepartment(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.update"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -237,7 +238,7 @@ func (h *StaffHandler) AssignStaffToDepartment(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto)
 }
 
-func (h *StaffHandler) AssignAdminToDepartment(c *fiber.Ctx) error {
+func (h *StaffHandler) AssignAdminToDepartment(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.update"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -266,7 +267,7 @@ func (h *StaffHandler) AssignAdminToDepartment(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *StaffHandler) ChangePassword(c *fiber.Ctx) error {
+func (h *StaffHandler) ChangePassword(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.update"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -288,7 +289,7 @@ func (h *StaffHandler) ChangePassword(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusAccepted)
 }
 
-func (h *StaffHandler) Delete(c *fiber.Ctx) error {
+func (h *StaffHandler) Delete(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "staff.delete"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}

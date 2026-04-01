@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/gofiber/fiber/v2"
 	"github.com/iancoleman/strcase"
+	appbridge "github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type SearchResult[T any] struct {
@@ -27,7 +28,7 @@ type SearchQuery struct {
 	Direction   string   `json:"direction"`
 }
 
-func ParseSearchQuery(c *fiber.Ctx, defLimit int) SearchQuery {
+func ParseSearchQuery(c frameworkhttp.Context, defLimit int) SearchQuery {
 	kw := utils.GetQueryAsString(c, "keyword")
 	limit := utils.GetQueryAsInt(c, "limit", defLimit)
 	page := utils.GetQueryAsInt(c, "page", 1)
@@ -53,7 +54,7 @@ func ParseSearchQuery(c *fiber.Ctx, defLimit int) SearchQuery {
 
 	extendWhere := make([]string, 0)
 
-	args := c.Context().QueryArgs()
+	args := appbridge.MustFiberContext(c).Context().QueryArgs()
 
 	if rawList := args.PeekMulti("extend_where[]"); len(rawList) > 0 {
 		for _, b := range rawList {

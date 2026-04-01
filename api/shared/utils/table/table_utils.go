@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type TableQuery struct {
@@ -23,7 +23,7 @@ type TableListResult[T any] struct {
 	Total int  `json:"total"`
 }
 
-func ParseTableQuery(c *fiber.Ctx, defLimit int) TableQuery {
+func ParseTableQuery(c frameworkhttp.Context, defLimit int) TableQuery {
 	limit := utils.GetQueryAsInt(c, "limit", defLimit)
 	page := utils.GetQueryAsInt(c, "page", 1)
 

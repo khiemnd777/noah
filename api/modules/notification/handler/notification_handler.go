@@ -10,6 +10,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type NotificationHandler struct {
@@ -24,7 +25,7 @@ func NewNotificationHandler(svc *service.NotificationService, deps *module.Modul
 	}
 }
 
-func (h *NotificationHandler) RegisterRoutes(router fiber.Router) {
+func (h *NotificationHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/unread/count", h.CountUnread)
 	app.RouterGet(router, "/short", h.ShortList)
 	app.RouterGet(router, "/latest", h.LatestNotification)
@@ -35,11 +36,11 @@ func (h *NotificationHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterGet(router, "", h.ListPaginated)
 }
 
-func (h *NotificationHandler) RegisterRoutesInternal(router fiber.Router) {
+func (h *NotificationHandler) RegisterRoutesInternal(router frameworkhttp.Router) {
 	app.RouterPost(router, "/create", h.Create)
 }
 
-func (h *NotificationHandler) LatestNotification(c *fiber.Ctx) error {
+func (h *NotificationHandler) LatestNotification(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func (h *NotificationHandler) LatestNotification(c *fiber.Ctx) error {
 	return c.JSON(latest)
 }
 
-func (h *NotificationHandler) GetByMessage(c *fiber.Ctx) error {
+func (h *NotificationHandler) GetByMessage(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (h *NotificationHandler) GetByMessage(c *fiber.Ctx) error {
 	return c.JSON(not)
 }
 
-func (h *NotificationHandler) ListPaginated(c *fiber.Ctx) error {
+func (h *NotificationHandler) ListPaginated(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func (h *NotificationHandler) ListPaginated(c *fiber.Ctx) error {
 	})
 }
 
-func (h *NotificationHandler) ShortList(c *fiber.Ctx) error {
+func (h *NotificationHandler) ShortList(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -101,7 +102,7 @@ func (h *NotificationHandler) ShortList(c *fiber.Ctx) error {
 	return c.JSON(items)
 }
 
-func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
+func (h *NotificationHandler) MarkAsRead(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -121,7 +122,7 @@ func (h *NotificationHandler) MarkAsRead(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *NotificationHandler) Create(c *fiber.Ctx) error {
+func (h *NotificationHandler) Create(c frameworkhttp.Context) error {
 	var req struct {
 		UserID     int            `json:"user_id"`
 		NotifierID int            `json:"notifier_id"`
@@ -146,7 +147,7 @@ func (h *NotificationHandler) Create(c *fiber.Ctx) error {
 	return c.JSON(notification)
 }
 
-func (h *NotificationHandler) CountUnread(c *fiber.Ctx) error {
+func (h *NotificationHandler) CountUnread(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func (h *NotificationHandler) CountUnread(c *fiber.Ctx) error {
 	})
 }
 
-func (h *NotificationHandler) Delete(c *fiber.Ctx) error {
+func (h *NotificationHandler) Delete(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}
@@ -182,7 +183,7 @@ func (h *NotificationHandler) Delete(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (h *NotificationHandler) DeleteAll(c *fiber.Ctx) error {
+func (h *NotificationHandler) DeleteAll(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyRole(c, h.deps.Ent.(*generated.Client), "admin", "staff"); err != nil {
 		return err
 	}

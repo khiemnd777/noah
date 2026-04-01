@@ -12,6 +12,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/circuitbreaker"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	"github.com/sony/gobreaker"
 )
 
@@ -22,7 +23,7 @@ type RetryOptions struct {
 	ShouldRetry func(error) bool
 }
 
-func isWebSocketRequest(c *fiber.Ctx) bool {
+func isWebSocketRequest(c frameworkhttp.Context) bool {
 	// RFC 6455
 	if c.Method() != fiber.MethodGet {
 		return false
@@ -37,7 +38,7 @@ func isWebSocketRequest(c *fiber.Ctx) bool {
 }
 
 // WrapHandler applies Circuit Breaker + Retry logic to a single handler
-func WrapHandler(name string, h fiber.Handler, opts ...RetryOptions) fiber.Handler {
+func WrapHandler(name string, h frameworkhttp.Handler, opts ...RetryOptions) frameworkhttp.Handler {
 	cfgRetry := config.Get().Retry
 
 	// default retry config
@@ -60,7 +61,9 @@ func WrapHandler(name string, h fiber.Handler, opts ...RetryOptions) fiber.Handl
 		retry = opts[0]
 	}
 
-	return func(c *fiber.Ctx) error {
+	return func(c frameworkhttp.Context) error {
+		fiberCtx := MustFiberContext(c)
+
 		if isWebSocketRequest(c) {
 			logger.Info("🔌 WS bypass circuit: " + name)
 			return h(c)
@@ -76,7 +79,7 @@ func WrapHandler(name string, h fiber.Handler, opts ...RetryOptions) fiber.Handl
 				}
 
 				if handleErr == nil {
-					statusCode := c.Response().StatusCode()
+					statusCode := fiberCtx.Response().StatusCode()
 					if statusCode >= fiber.StatusBadRequest && statusCode < fiber.StatusInternalServerError {
 						return nil, circuitbreaker.ErrClientResponse
 					}
@@ -103,7 +106,7 @@ func WrapHandler(name string, h fiber.Handler, opts ...RetryOptions) fiber.Handl
 }
 
 // WrapHandlers applies middleware(s) and wraps the final handler with CB + Retry
-func WrapHandlers(name string, handlers []fiber.Handler, opts ...RetryOptions) []fiber.Handler {
+func WrapHandlers(name string, handlers []frameworkhttp.Handler, opts ...RetryOptions) []frameworkhttp.Handler {
 	if len(handlers) == 0 {
 		panic("no handlers provided")
 	}

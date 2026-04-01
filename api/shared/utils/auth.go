@@ -3,8 +3,8 @@ package utils
 import (
 	"os"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/shared/config"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 func GetAuthSecret() string {
@@ -26,7 +26,7 @@ func GetInternalToken() string {
 }
 
 // GetAccessToken extracts the Bearer token from the Authorization header
-func GetAccessToken(c *fiber.Ctx) string {
+func GetAccessToken(c frameworkhttp.Context) string {
 	authHeader := c.Get("Authorization")
 	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 		return authHeader[7:]

@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/shared/cache"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated/user"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 // ===================================
@@ -47,25 +47,25 @@ const (
 )
 
 // Backward-compatible: single role -> ANY mode.
-func GuardRole(c *fiber.Ctx, roleName string, dbEnt *generated.Client) error {
+func GuardRole(c frameworkhttp.Context, roleName string, dbEnt *generated.Client) error {
 	return GuardAnyRole(c, dbEnt, roleName)
 }
 
 // Require user has ANY of the provided role names (case-insensitive).
-func GuardAnyRole(c *fiber.Ctx, dbEnt *generated.Client, roleNames ...string) error {
+func GuardAnyRole(c frameworkhttp.Context, dbEnt *generated.Client, roleNames ...string) error {
 	return guardRoles(c, dbEnt, anyMode, roleNames...)
 }
 
 // Require user has ALL of the provided role names (case-insensitive).
-func GuardAllRoles(c *fiber.Ctx, dbEnt *generated.Client, roleNames ...string) error {
+func GuardAllRoles(c frameworkhttp.Context, dbEnt *generated.Client, roleNames ...string) error {
 	return guardRoles(c, dbEnt, allMode, roleNames...)
 }
 
-func guardRoles(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, roleNames ...string) error {
+func guardRoles(c frameworkhttp.Context, dbEnt *generated.Client, mode requireMode, roleNames ...string) error {
 	uid, ok := utils.GetUserIDInt(c)
 	if !ok || uid <= 0 {
 		logger.Debug(fmt.Sprintf("GuardRoles: missing/invalid userID; mode=%v roles=%v", mode, roleNames))
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+		return c.Status(http.StatusUnauthorized).JSON(map[string]any{"error": "Unauthorized"})
 	}
 
 	start := time.Now()
@@ -80,7 +80,7 @@ func guardRoles(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, roleNam
 	req := normalizeStrings(roleNames)
 	if len(req) == 0 {
 		logger.Warn("GuardRoles: empty roleNames")
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": "Forbidden: no role specified"})
+		return c.Status(http.StatusForbidden).JSON(map[string]any{"error": "Forbidden: no role specified"})
 	}
 
 	roleSetPtr, err := cache.Get(userRoleSetKey(uid), cache.TTLLong, func() (*map[string]struct{}, error) {
@@ -108,7 +108,7 @@ func guardRoles(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, roleNam
 	})
 	if err != nil {
 		logger.Error(fmt.Sprintf("GuardRoles: cache/DB error userID=%d err=%v", uid, err))
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "DB error"})
+		return c.Status(http.StatusInternalServerError).JSON(map[string]any{"error": "DB error"})
 	}
 	roleSet := *roleSetPtr
 
@@ -138,9 +138,9 @@ func guardRoles(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, roleNam
 	if !allowed {
 		logger.Debug(fmt.Sprintf("GuardRoles forbidden: userID=%d mode=%v have=%v need=%v missing=%v",
 			uid, mode, mapKeys(roleSet), req, missing))
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
+		return c.Status(http.StatusForbidden).JSON(map[string]any{
 			"error":   "Forbidden: missing role",
-			"details": fiber.Map{"required": req, "missing": missing},
+			"details": map[string]any{"required": req, "missing": missing},
 		})
 	}
 	return nil
@@ -151,16 +151,16 @@ func guardRoles(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, roleNam
 // ==========================
 
 // Require user has ANY of the provided permission values (e.g. "product_read").
-func GuardAnyPermission(c *fiber.Ctx, dbEnt *generated.Client, permValues ...string) error {
+func GuardAnyPermission(c frameworkhttp.Context, dbEnt *generated.Client, permValues ...string) error {
 	return guardPermissions(c, dbEnt, anyMode, permValues...)
 }
 
 // Require user has ALL of the provided permission values.
-func GuardAllPermissions(c *fiber.Ctx, dbEnt *generated.Client, permValues ...string) error {
+func GuardAllPermissions(c frameworkhttp.Context, dbEnt *generated.Client, permValues ...string) error {
 	return guardPermissions(c, dbEnt, allMode, permValues...)
 }
 
-func getPerms(c *fiber.Ctx, dbEnt *generated.Client) (map[string]struct{}, error) {
+func getPerms(c frameworkhttp.Context, dbEnt *generated.Client) (map[string]struct{}, error) {
 	if set, ok := utils.GetPermSetFromClaims(c); ok {
 		return set, nil
 	}
@@ -168,7 +168,7 @@ func getPerms(c *fiber.Ctx, dbEnt *generated.Client) (map[string]struct{}, error
 	uid, ok := utils.GetUserIDInt(c)
 
 	if !ok || uid <= 0 {
-		return nil, c.Status(http.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+		return nil, c.Status(http.StatusUnauthorized).JSON(map[string]any{"error": "Unauthorized"})
 	}
 	ctx := c.UserContext()
 
@@ -197,7 +197,7 @@ func getPerms(c *fiber.Ctx, dbEnt *generated.Client) (map[string]struct{}, error
 	})
 	if err != nil {
 		logger.Error(fmt.Sprintf("GuardPermissions: cache/DB error userID=%d err=%v", uid, err))
-		return nil, c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "DB error"})
+		return nil, c.Status(http.StatusInternalServerError).JSON(map[string]any{"error": "DB error"})
 	}
 
 	permSet := *permSetPtr
@@ -229,11 +229,11 @@ func HasAllPerms(have map[string]struct{}, permValues ...string) bool {
 	return allowed
 }
 
-func guardPermissions(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, permValues ...string) error {
+func guardPermissions(c frameworkhttp.Context, dbEnt *generated.Client, mode requireMode, permValues ...string) error {
 	req := normalizeStrings(permValues)
 	if len(req) == 0 {
 		logger.Warn("GuardPermissions: empty permValues")
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{"error": "Forbidden: no permission specified"})
+		return c.Status(http.StatusForbidden).JSON(map[string]any{"error": "Forbidden: no permission specified"})
 	}
 
 	permSet, err := getPerms(c, dbEnt)
@@ -242,9 +242,9 @@ func guardPermissions(c *fiber.Ctx, dbEnt *generated.Client, mode requireMode, p
 	}
 
 	if allowed, missing := checkPerms(permSet, mode, req); !allowed {
-		return c.Status(http.StatusForbidden).JSON(fiber.Map{
+		return c.Status(http.StatusForbidden).JSON(map[string]any{
 			"error":   "Forbidden: missing permission",
-			"details": fiber.Map{"required": req, "missing": missing},
+			"details": map[string]any{"required": req, "missing": missing},
 		})
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/khiemnd777/noah_api/modules/metadata/config"
@@ -26,12 +27,12 @@ func NewExportHandler(engine *service.ImportEngine, deps *module.ModuleDeps[conf
 	return &ExportHandler{engine: engine, deps: deps}
 }
 
-func (h *ExportHandler) RegisterRoutes(r fiber.Router) {
+func (h *ExportHandler) RegisterRoutes(r frameworkhttp.Router) {
 	// POST /metadata/export?scope=clinics&code=...
 	app.RouterPost(r, "/export", h.Export)
 }
 
-func (h *ExportHandler) Export(c *fiber.Ctx) error {
+func (h *ExportHandler) Export(c frameworkhttp.Context) error {
 	scope := strings.TrimSpace(c.Query("scope"))
 	code := strings.TrimSpace(c.Query("code"))
 	if scope == "" {
@@ -165,7 +166,7 @@ func (h *ExportHandler) Export(c *fiber.Ctx) error {
 	c.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
-	if err := x.Write(c.Response().BodyWriter()); err != nil {
+	if err := x.Write(app.MustFiberContext(c).Response().BodyWriter()); err != nil {
 		logger.Error("metadata.export.write_failed", "err", err)
 		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, "failed to write excel file")
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
@@ -62,7 +63,7 @@ func singleJoiningSlash(a, b string) string {
 	}
 }
 
-func isWebSocketRequest(c *fiber.Ctx) bool {
+func isWebSocketRequest(c frameworkhttp.Context) bool {
 	// RFC 6455
 	if c.Method() != fiber.MethodGet {
 		return false
@@ -78,31 +79,27 @@ func isWebSocketRequest(c *fiber.Ctx) bool {
 
 // RegisterReverseProxy mounts a reverse proxy at given route with load balancing
 func RegisterReverseProxy(app frameworkapp.Application, route string, targets []string) error {
-	fiberApp, err := appbridge.FiberApplication(app)
-	if err != nil {
-		return err
-	}
-
 	lb, err := NewLoadBalancer(targets)
 	if err != nil {
 		return err
 	}
 
-	fiberApp.All(route+"/*", func(c *fiber.Ctx) error {
+	app.Router().All(route+"/*", func(c frameworkhttp.Context) error {
+		fiberCtx := appbridge.MustFiberContext(c)
 		target := lb.NextTarget()
 
 		// ✅ WS: bypass circuit breaker + use WS bridge proxy
 		if isWebSocketRequest(c) {
 			// lưu context cần thiết cho ws handler
-			c.Locals("__proxy_target", target.String())
-			c.Locals("__proxy_path", c.Params("*"))
-			c.Locals("__proxy_query", string(c.Context().URI().QueryString()))
-			c.Locals("__proxy_auth", c.Get("Authorization"))
+			fiberCtx.Locals("__proxy_target", target.String())
+			fiberCtx.Locals("__proxy_path", fiberCtx.Params("*"))
+			fiberCtx.Locals("__proxy_query", string(fiberCtx.Context().URI().QueryString()))
+			fiberCtx.Locals("__proxy_auth", fiberCtx.Get("Authorization"))
 
-			logger.Debug(fmt.Sprintf("[Gateway] WS Proxy %s → %s", c.OriginalURL(), target.String()))
+			logger.Debug(fmt.Sprintf("[Gateway] WS Proxy %s → %s", fiberCtx.OriginalURL(), target.String()))
 
 			// IMPORTANT: MUST upgrade using fiberws.New
-			return fiberws.New(proxyWebSocket)(c)
+			return fiberws.New(proxyWebSocket)(fiberCtx)
 		}
 
 		// ✅ HTTP: keep current reverse proxy (can be wrapped by circuit breaker outside if you want)
@@ -111,8 +108,8 @@ func RegisterReverseProxy(app frameworkapp.Application, route string, targets []
 		proxy.Director = func(req *http.Request) {
 			req.URL.Scheme = target.Scheme
 			req.URL.Host = target.Host
-			req.URL.Path = singleJoiningSlash(target.Path, c.Params("*"))
-			req.URL.RawQuery = string(c.Context().URI().QueryString())
+			req.URL.Path = singleJoiningSlash(target.Path, fiberCtx.Params("*"))
+			req.URL.RawQuery = string(fiberCtx.Context().URI().QueryString())
 			req.Host = target.Host
 
 			// Clean hop-by-hop headers (HTTP only)
@@ -126,15 +123,15 @@ func RegisterReverseProxy(app frameworkapp.Application, route string, targets []
 			}
 
 			// Forward headers
-			if auth := c.Get("Authorization"); auth != "" {
+			if auth := fiberCtx.Get("Authorization"); auth != "" {
 				req.Header.Set("Authorization", auth)
 			}
 			req.Header.Set("X-Internal-Token", utils.GetInternalToken())
 
-			logger.Debug(fmt.Sprintf("[Gateway] Proxy %s → %s", c.OriginalURL(), target.String()))
+			logger.Debug(fmt.Sprintf("[Gateway] Proxy %s → %s", fiberCtx.OriginalURL(), target.String()))
 		}
 
-		fasthttpadaptor.NewFastHTTPHandler(proxy)(c.Context())
+		fasthttpadaptor.NewFastHTTPHandler(proxy)(fiberCtx.Context())
 		return nil
 	})
 

@@ -35,6 +35,11 @@ This run established a reusable `framework/` layer and migrated the lowest-risk 
   - `api/shared/cache/cache.go`
   - `api/shared/cache/invalidate.go`
   - `api/shared/runtime/registry.go`
+- Migrated HTTP-facing API seams:
+  - `api/shared/app/*`
+  - `api/shared/middleware/*`
+  - `api/gateway/proxy/*`
+  - `api/modules/*/handler/*` signatures
 
 ## Phase Validation Status
 - Phase 1, Extraction: Passed
@@ -50,7 +55,7 @@ This run established a reusable `framework/` layer and migrated the lowest-risk 
 
 ## Remaining Risks
 - `framework/pkg/db` still cannot be the primary API boundary for `api/` until raw `*sql.DB` dependencies are refactored behind framework-level contracts.
-- Feature handlers and middleware still use Fiber directly, so the router abstraction is present but not yet repository-wide.
+- Handler implementations still reference some Fiber-native response constants and low-level request helpers even though their exposed seams now use framework HTTP contracts.
 - Redis is still used directly in some backend packages outside `api/shared/cache`.
 - Module bootstrap still exposes concrete runtime dependencies and should be moved behind a framework module/runtime abstraction in a follow-up phase.
 

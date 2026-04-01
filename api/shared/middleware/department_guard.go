@@ -1,31 +1,34 @@
 package middleware
 
 import (
-	"github.com/gofiber/fiber/v2"
+	stdhttp "net/http"
+
+	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
-func RequireDepartmentMember(deptIDFromPathParam string) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func RequireDepartmentMember(deptIDFromPathParam string) frameworkhttp.Handler {
+	return func(c frameworkhttp.Context) error {
 		userID, ok := utils.GetUserIDInt(c)
 		if !ok || userID <= 0 {
-			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+			return client_error.ResponseError(c, stdhttp.StatusUnauthorized, nil, "unauthorized")
 		}
 
 		deptID, ok := utils.GetDeptIDInt(c)
 		if !ok || deptID <= 0 {
-			return fiber.NewError(fiber.StatusUnauthorized, "unauthorized")
+			return client_error.ResponseError(c, stdhttp.StatusUnauthorized, nil, "unauthorized")
 		}
 
 		paramDeptID, err := utils.GetParamAsInt(c, deptIDFromPathParam)
 		if err != nil || paramDeptID <= 0 {
-			return fiber.NewError(fiber.StatusBadRequest, "invalid department id")
+			return client_error.ResponseError(c, stdhttp.StatusBadRequest, err, "invalid department id")
 		}
 
 		ok = paramDeptID == deptID
 
 		if !ok {
-			return fiber.NewError(fiber.StatusForbidden, "forbidden: not a member of department")
+			return client_error.ResponseError(c, stdhttp.StatusForbidden, nil, "forbidden: not a member of department")
 		}
 		return c.Next()
 	}

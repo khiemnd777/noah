@@ -11,6 +11,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/logger"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type AuthHandler struct {
@@ -21,14 +22,14 @@ func NewAuthHandler(svc *service.AuthService) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 
-func (h *AuthHandler) RegisterRoutes(router fiber.Router) {
+func (h *AuthHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterPost(router, "/login", h.Login)
 	app.RouterPost(router, "/register", h.Register)
 	app.RouterPost(router, "/refresh-token", h.Refresh)
 	app.RouterPost(router, "/logout", h.Logout)
 }
 
-func (h *AuthHandler) Login(c *fiber.Ctx) error {
+func (h *AuthHandler) Login(c frameworkhttp.Context) error {
 	type req struct {
 		PhoneOrEmail string `json:"phone_or_email"`
 		Password     string `json:"password"`
@@ -53,7 +54,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	return c.JSON(tokens)
 }
 
-func (h *AuthHandler) Register(c *fiber.Ctx) error {
+func (h *AuthHandler) Register(c frameworkhttp.Context) error {
 	type RegisterRequest struct {
 		PhoneOrEmail string `json:"phone_or_email"`
 		Password     string `json:"password"`
@@ -83,7 +84,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	return c.JSON(tokens)
 }
 
-func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
+func (h *AuthHandler) Refresh(c frameworkhttp.Context) error {
 	type req struct {
 		Token string `json:"refreshToken"`
 	}
@@ -102,7 +103,7 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	return c.JSON(tokens)
 }
 
-func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+func (h *AuthHandler) Logout(c frameworkhttp.Context) error {
 	type req struct {
 		Token string `json:"refreshToken"`
 	}

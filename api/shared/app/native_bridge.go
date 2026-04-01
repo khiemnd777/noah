@@ -4,27 +4,26 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
-	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
-func FiberApplication(app frameworkapp.Application) (*fiber.App, error) {
-	native := app.Native()
-	fiberApp, ok := native.(*fiber.App)
+func FiberContext(ctx frameworkhttp.Context) (*fiber.Ctx, error) {
+	native := ctx.Native()
+	fiberCtx, ok := native.(*fiber.Ctx)
 	if !ok {
-		return nil, fmt.Errorf("framework application is not fiber-backed")
+		return nil, fmt.Errorf("framework context is not fiber-backed")
 	}
-	return fiberApp, nil
+	return fiberCtx, nil
 }
 
-func MustFiberApplication(app frameworkapp.Application) *fiber.App {
-	fiberApp, err := FiberApplication(app)
+func MustFiberContext(ctx frameworkhttp.Context) *fiber.Ctx {
+	fiberCtx, err := FiberContext(ctx)
 	if err != nil {
 		panic(err)
 	}
-	return fiberApp
+	return fiberCtx
 }
 
-func Group(app frameworkapp.Application, prefix string, handlers ...fiber.Handler) fiber.Router {
-	fiberApp := MustFiberApplication(app)
-	return fiberApp.Group(prefix, handlers...)
+func Group(app interface{ Router() frameworkhttp.Router }, prefix string, handlers ...frameworkhttp.Handler) frameworkhttp.Router {
+	return app.Router().Mount(prefix, handlers...)
 }

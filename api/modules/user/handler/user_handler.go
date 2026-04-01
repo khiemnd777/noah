@@ -10,6 +10,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type UserHandler struct {
@@ -21,7 +22,7 @@ func NewUserHandler(svc *service.UserService, deps *module.ModuleDeps[config.Mod
 	return &UserHandler{svc: svc, deps: deps}
 }
 
-func (h *UserHandler) RegisterRoutes(router fiber.Router) {
+func (h *UserHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterPost(router, "/", h.Create)
 	app.RouterGet(router, "/admin", h.GetAdminUserID)
 	app.RouterPost(router, "/batch-get", h.BatchGet)
@@ -32,7 +33,7 @@ func (h *UserHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/:id", h.Delete)
 }
 
-func (h *UserHandler) Create(c *fiber.Ctx) error {
+func (h *UserHandler) Create(c frameworkhttp.Context) error {
 	type req struct {
 		Email    string  `json:"email"`
 		Password string  `json:"password"`
@@ -51,7 +52,7 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func (h *UserHandler) GetByID(c *fiber.Ctx) error {
+func (h *UserHandler) GetByID(c frameworkhttp.Context) error {
 	id, _ := utils.GetParamAsInt(c, "id")
 	user, err := h.svc.GetByID(c.UserContext(), id)
 	if err != nil {
@@ -60,7 +61,7 @@ func (h *UserHandler) GetByID(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func (h *UserHandler) GetAdminUserID(c *fiber.Ctx) error {
+func (h *UserHandler) GetAdminUserID(c frameworkhttp.Context) error {
 	if err := rbac.GuardRole(c, "admin", h.deps.Ent.(*generated.Client)); err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ func (h *UserHandler) GetAdminUserID(c *fiber.Ctx) error {
 	return c.JSON(userID)
 }
 
-func (h *UserHandler) GetQRCodeByUserID(c *fiber.Ctx) error {
+func (h *UserHandler) GetQRCodeByUserID(c frameworkhttp.Context) error {
 	userID, _ := utils.GetParamAsInt(c, "id")
 	qrCode, err := h.svc.GetQRCodeByUserID(c.UserContext(), userID)
 	if err != nil {
@@ -83,7 +84,7 @@ func (h *UserHandler) GetQRCodeByUserID(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": qrCode})
 }
 
-func (h *UserHandler) GetUserByRefCode(c *fiber.Ctx) error {
+func (h *UserHandler) GetUserByRefCode(c frameworkhttp.Context) error {
 	refCode := utils.GetParamAsString(c, "ref_code")
 
 	user, err := h.svc.GetUserByRefCode(c.UserContext(), refCode)
@@ -97,7 +98,7 @@ func (h *UserHandler) GetUserByRefCode(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func (h *UserHandler) BatchGet(c *fiber.Ctx) error {
+func (h *UserHandler) BatchGet(c frameworkhttp.Context) error {
 	var req struct {
 		IDs []int `json:"ids"`
 	}
@@ -118,7 +119,7 @@ func (h *UserHandler) BatchGet(c *fiber.Ctx) error {
 	return c.JSON(users)
 }
 
-func (h *UserHandler) Update(c *fiber.Ctx) error {
+func (h *UserHandler) Update(c frameworkhttp.Context) error {
 	if err := rbac.GuardRole(c, "user", h.deps.Ent.(*generated.Client)); err != nil {
 		return err
 	}
@@ -141,7 +142,7 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func (h *UserHandler) Delete(c *fiber.Ctx) error {
+func (h *UserHandler) Delete(c frameworkhttp.Context) error {
 	if err := rbac.GuardRole(c, "user", h.deps.Ent.(*generated.Client)); err != nil {
 		return err
 	}

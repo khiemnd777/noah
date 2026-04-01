@@ -14,6 +14,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type ObservabilityHandler struct {
@@ -25,12 +26,12 @@ func NewObservabilityHandler(svc service.ObservabilityService, deps *module.Modu
 	return &ObservabilityHandler{svc: svc, deps: deps}
 }
 
-func (h *ObservabilityHandler) RegisterRoutes(router fiber.Router) {
+func (h *ObservabilityHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/logs", h.ListLogs)
 	app.RouterGet(router, "/logs/summary", h.GetSummary)
 }
 
-func (h *ObservabilityHandler) ListLogs(c *fiber.Ctx) error {
+func (h *ObservabilityHandler) ListLogs(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "system_log.read"); err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func (h *ObservabilityHandler) ListLogs(c *fiber.Ctx) error {
 	})
 }
 
-func (h *ObservabilityHandler) GetSummary(c *fiber.Ctx) error {
+func (h *ObservabilityHandler) GetSummary(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "system_log.read"); err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func (h *ObservabilityHandler) GetSummary(c *fiber.Ctx) error {
 	return c.JSON(summary)
 }
 
-func parseListLogsQuery(c *fiber.Ctx) (model.ListLogsQuery, error) {
+func parseListLogsQuery(c frameworkhttp.Context) (model.ListLogsQuery, error) {
 	from, err := parseTimeQuery(c.Query("from"))
 	if err != nil {
 		return model.ListLogsQuery{}, err
@@ -142,7 +143,7 @@ func splitCSV(raw string) []string {
 	return out
 }
 
-func parseOptionalIntQuery(c *fiber.Ctx, key string) (*int, error) {
+func parseOptionalIntQuery(c frameworkhttp.Context, key string) (*int, error) {
 	raw := strings.TrimSpace(c.Query(key))
 	if raw == "" {
 		return nil, nil

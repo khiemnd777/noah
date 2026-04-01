@@ -14,6 +14,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type ImportFieldProfileHandler struct {
@@ -28,7 +29,7 @@ func NewImportFieldProfileHandler(
 	return &ImportFieldProfileHandler{svc: svc, deps: deps}
 }
 
-func (h *ImportFieldProfileHandler) RegisterRoutes(r fiber.Router) {
+func (h *ImportFieldProfileHandler) RegisterRoutes(r frameworkhttp.Router) {
 	app.RouterGet(r, "/import-profiles", h.List)
 	app.RouterPost(r, "/import-profiles", h.Create)
 	app.RouterGet(r, "/import-profiles/:id", h.Get)
@@ -36,11 +37,11 @@ func (h *ImportFieldProfileHandler) RegisterRoutes(r fiber.Router) {
 	app.RouterDelete(r, "/import-profiles/:id", h.Delete)
 }
 
-func (h *ImportFieldProfileHandler) guard(c *fiber.Ctx) error {
+func (h *ImportFieldProfileHandler) guard(c frameworkhttp.Context) error {
 	return rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata")
 }
 
-func (h *ImportFieldProfileHandler) List(c *fiber.Ctx) error {
+func (h *ImportFieldProfileHandler) List(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -55,7 +56,7 @@ func (h *ImportFieldProfileHandler) List(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": out})
 }
 
-func (h *ImportFieldProfileHandler) Get(c *fiber.Ctx) error {
+func (h *ImportFieldProfileHandler) Get(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -72,7 +73,7 @@ func (h *ImportFieldProfileHandler) Get(c *fiber.Ctx) error {
 	return c.JSON(out)
 }
 
-func (h *ImportFieldProfileHandler) Create(c *fiber.Ctx) error {
+func (h *ImportFieldProfileHandler) Create(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -89,7 +90,7 @@ func (h *ImportFieldProfileHandler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(out)
 }
 
-func (h *ImportFieldProfileHandler) Update(c *fiber.Ctx) error {
+func (h *ImportFieldProfileHandler) Update(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -111,7 +112,7 @@ func (h *ImportFieldProfileHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(out)
 }
 
-func (h *ImportFieldProfileHandler) Delete(c *fiber.Ctx) error {
+func (h *ImportFieldProfileHandler) Delete(c frameworkhttp.Context) error {
 	if err := h.guard(c); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}

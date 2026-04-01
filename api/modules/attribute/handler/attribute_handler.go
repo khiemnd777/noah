@@ -11,6 +11,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type AttributeHandler struct {
@@ -25,7 +26,7 @@ func NewAttributeHandler(svc *service.AttributeService, deps *module.ModuleDeps[
 	}
 }
 
-func (h *AttributeHandler) RegisterRoutes(router fiber.Router) {
+func (h *AttributeHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/", h.List)
 	app.RouterPost(router, "/", h.Create)
 	app.RouterGet(router, "/:id", h.Get)
@@ -33,7 +34,7 @@ func (h *AttributeHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/:id", h.Delete)
 }
 
-func (h *AttributeHandler) Create(c *fiber.Ctx) error {
+func (h *AttributeHandler) Create(c frameworkhttp.Context) error {
 	var req struct {
 		UserID        int    `json:"user_id"`
 		AttributeName string `json:"attribute_name"`
@@ -49,7 +50,7 @@ func (h *AttributeHandler) Create(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *AttributeHandler) Get(c *fiber.Ctx) error {
+func (h *AttributeHandler) Get(c frameworkhttp.Context) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	userId, _ := utils.GetUserIDInt(c)
 	result, err := h.svc.GetAttribute(c.UserContext(), id, userId)
@@ -59,7 +60,7 @@ func (h *AttributeHandler) Get(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *AttributeHandler) List(c *fiber.Ctx) error {
+func (h *AttributeHandler) List(c frameworkhttp.Context) error {
 	userId, _ := strconv.Atoi(c.Query("user_id"))
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	limit, _ := strconv.Atoi(c.Query("limit", "20"))
@@ -74,7 +75,7 @@ func (h *AttributeHandler) List(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AttributeHandler) Update(c *fiber.Ctx) error {
+func (h *AttributeHandler) Update(c frameworkhttp.Context) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	userId, _ := utils.GetUserIDInt(c)
 	var req struct {
@@ -91,7 +92,7 @@ func (h *AttributeHandler) Update(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *AttributeHandler) Delete(c *fiber.Ctx) error {
+func (h *AttributeHandler) Delete(c frameworkhttp.Context) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	userId, _ := utils.GetUserIDInt(c)
 	if err := h.svc.DeleteAttribute(c.UserContext(), id, userId); err != nil {

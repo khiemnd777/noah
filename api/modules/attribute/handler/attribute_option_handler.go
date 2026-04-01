@@ -11,6 +11,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/app/client_error"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type AttributeOptionHandler struct {
@@ -25,8 +26,8 @@ func NewAttributeOptionHandler(svc *service.AttributeOptionService, deps *module
 	}
 }
 
-func (h *AttributeOptionHandler) RegisterRoutes(router fiber.Router) {
-	router.Route("/:id/options", func(r fiber.Router) {
+func (h *AttributeOptionHandler) RegisterRoutes(router frameworkhttp.Router) {
+	router.Route("/:id/options", func(r frameworkhttp.Router) {
 		app.RouterGet(r, "/", h.ListOptions)
 		app.RouterPost(r, "/", h.CreateOption)
 		app.RouterPut(r, "/reorder", h.ReorderOptions)
@@ -35,7 +36,7 @@ func (h *AttributeOptionHandler) RegisterRoutes(router fiber.Router) {
 	})
 }
 
-func (h *AttributeOptionHandler) ListOptions(c *fiber.Ctx) error {
+func (h *AttributeOptionHandler) ListOptions(c frameworkhttp.Context) error {
 	attributeID, _ := strconv.Atoi(c.Params("id"))
 	userID, _ := utils.GetUserIDInt(c)
 
@@ -46,7 +47,7 @@ func (h *AttributeOptionHandler) ListOptions(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *AttributeOptionHandler) CreateOption(c *fiber.Ctx) error {
+func (h *AttributeOptionHandler) CreateOption(c frameworkhttp.Context) error {
 	attributeID, _ := strconv.Atoi(c.Params("id"))
 	userID, _ := utils.GetUserIDInt(c)
 
@@ -65,7 +66,7 @@ func (h *AttributeOptionHandler) CreateOption(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *AttributeOptionHandler) UpdateOption(c *fiber.Ctx) error {
+func (h *AttributeOptionHandler) UpdateOption(c frameworkhttp.Context) error {
 	attributeID, _ := strconv.Atoi(c.Params("id"))
 	optionID, _ := strconv.Atoi(c.Params("option_id"))
 	userID, _ := utils.GetUserIDInt(c)
@@ -85,7 +86,7 @@ func (h *AttributeOptionHandler) UpdateOption(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func (h *AttributeOptionHandler) DeleteOption(c *fiber.Ctx) error {
+func (h *AttributeOptionHandler) DeleteOption(c frameworkhttp.Context) error {
 	attributeID, _ := strconv.Atoi(c.Params("id"))
 	optionID, _ := strconv.Atoi(c.Params("option_id"))
 	userID, _ := utils.GetUserIDInt(c)
@@ -96,7 +97,7 @@ func (h *AttributeOptionHandler) DeleteOption(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *AttributeOptionHandler) ReorderOptions(c *fiber.Ctx) error {
+func (h *AttributeOptionHandler) ReorderOptions(c frameworkhttp.Context) error {
 	attributeID, _ := strconv.Atoi(c.Params("id"))
 	userID, _ := utils.GetUserIDInt(c)
 

@@ -13,6 +13,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 type FieldHandler struct {
@@ -25,7 +26,7 @@ func NewFieldHandler(s *service.FieldService, deps *module.ModuleDeps[config.Mod
 }
 
 // Mount dưới /metadata
-func (h *FieldHandler) RegisterRoutes(router fiber.Router) {
+func (h *FieldHandler) RegisterRoutes(router frameworkhttp.Router) {
 	app.RouterGet(router, "/fields", h.ListByCollection) // ?collection_id=
 	app.RouterPost(router, "/fields", h.Create)
 	app.RouterPut(router, "/fields/sort", h.Sort)
@@ -34,7 +35,7 @@ func (h *FieldHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(router, "/fields/:id<int>", h.Delete)
 }
 
-func (h *FieldHandler) ListByCollection(c *fiber.Ctx) error {
+func (h *FieldHandler) ListByCollection(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -50,7 +51,7 @@ func (h *FieldHandler) ListByCollection(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": out})
 }
 
-func (h *FieldHandler) Get(c *fiber.Ctx) error {
+func (h *FieldHandler) Get(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -65,7 +66,7 @@ func (h *FieldHandler) Get(c *fiber.Ctx) error {
 	return c.JSON(out)
 }
 
-func (h *FieldHandler) Create(c *fiber.Ctx) error {
+func (h *FieldHandler) Create(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -80,7 +81,7 @@ func (h *FieldHandler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(out)
 }
 
-func (h *FieldHandler) Update(c *fiber.Ctx) error {
+func (h *FieldHandler) Update(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -99,7 +100,7 @@ func (h *FieldHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(out)
 }
 
-func (h *FieldHandler) Delete(c *fiber.Ctx) error {
+func (h *FieldHandler) Delete(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}
@@ -113,7 +114,7 @@ func (h *FieldHandler) Delete(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (h *FieldHandler) Sort(c *fiber.Ctx) error {
+func (h *FieldHandler) Sort(c frameworkhttp.Context) error {
 	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "privilege.metadata"); err != nil {
 		return client_error.ResponseError(c, fiber.StatusForbidden, err, err.Error())
 	}

@@ -1,5 +1,124 @@
 # AGENTS.md
 
+## Framework Transformation Mode
+
+This repository is currently undergoing a transformation from an application codebase into a reusable framework.
+
+During this mode, agents MUST:
+
+- prioritize architectural extraction over minimal changes
+- allow controlled large-scale refactoring when required
+- introduce abstraction layers (App, Module, Router, Cache, DB, Auth)
+- prepare separation between public API (`pkg/`) and implementation (`internal/`)
+- ensure all changes move toward a reusable, versionable framework
+
+In case of conflict:
+- transformation goals override "smallest change" rule
+- architectural correctness overrides short-term stability
+
+## Public API Boundary (Framework Rule)
+
+The framework must expose a clear public API surface:
+
+- `pkg/` contains ONLY:
+  - interfaces
+  - contracts
+  - abstractions
+- `internal/` contains ALL implementations:
+  - Fiber
+  - Redis
+  - DB (Ent/Postgres)
+  - circuit breaker
+  - runtime wiring
+
+Agents MUST:
+- never expose implementation types (e.g. *fiber.App, *sql.DB)
+- never import `internal/` from outside the framework
+- treat `pkg/` as a stable contract layer
+
+## Decoupling Mandate
+
+All framework-facing code MUST NOT depend directly on:
+
+- Fiber
+- Redis client
+- database driver (sql, ent client)
+- external libraries used internally
+
+Instead:
+- define interfaces in `pkg/`
+- implement adapters in `internal/`
+
+Agents MUST actively identify and remove tight coupling.
+
+## Core Abstractions (Required)
+
+The framework MUST define and stabilize the following abstractions:
+
+- App (entry point)
+- Module (plug & play feature unit)
+- Context (dependency injection)
+- Router (HTTP abstraction)
+- Cache
+- DB
+- Auth
+- Lifecycle
+
+Agents MUST move toward these abstractions during refactor.
+
+## Subagent Roles
+
+Agents may spawn specialized subagents with clear responsibilities:
+
+- analyzer:
+  scans codebase and detects coupling and architectural issues
+
+- architect:
+  defines target architecture and abstractions
+
+- refactorer:
+  performs code movement and restructuring
+
+- contract-guard:
+  ensures pkg/internal boundary and API safety
+
+- reviewer:
+  validates architecture and detects violations
+
+- tester:
+  ensures no regression and system stability
+
+Agents MUST:
+- assign tasks to appropriate subagents
+- avoid overlapping responsibilities
+- prefer parallel analysis when possible
+
+## Phased Refactoring Model
+
+All large refactors MUST follow phases:
+
+1. Extraction
+2. Decoupling
+3. Internalization
+4. Framework Core Introduction
+5. Stabilization
+
+Each phase must:
+- keep the system runnable
+- avoid partial or inconsistent state
+- be validated before moving forward
+
+## Migration Safety
+
+During transformation:
+
+- existing behavior MUST remain functional
+- avoid breaking changes unless explicitly allowed
+- prefer parallel structure over destructive rewrite
+- validate contracts between layers
+
+Agents MUST ensure safe incremental migration.
+
 ## Purpose
 
 This repository is a fullstack application organized as a modular codebase containing both frontend and backend projects in a shared folder structure. The goal is to preserve reusable architectural patterns from the source projects while removing all source-domain-specific business assumptions.
@@ -50,7 +169,7 @@ Act like a senior engineer working inside an existing production codebase:
 - prefer pragmatic, maintainable changes
 - avoid carrying over old business logic just because it existed in the source repo
 
-Make the smallest coherent change that fully solves the task.
+Make the smallest coherent change UNLESS performing framework transformation, where structural refactor is allowed if required.
 
 ---
 

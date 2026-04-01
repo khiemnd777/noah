@@ -36,6 +36,19 @@ Agents MUST:
 - never import `internal/` from outside the framework
 - treat `pkg/` as a stable contract layer
 
+## API Stability Rule
+
+The `pkg/` layer is considered a public contract.
+
+Agents MUST:
+
+- avoid breaking changes once an interface is introduced
+- prefer extending interfaces instead of modifying them
+- mark deprecated APIs before removal
+- treat `pkg/` as versioned surface
+
+Breaking changes must be explicitly declared.
+
 ## Decoupling Mandate
 
 All framework-facing code MUST NOT depend directly on:
@@ -88,10 +101,44 @@ Agents may spawn specialized subagents with clear responsibilities:
 - tester:
   ensures no regression and system stability
 
+- migration-planner:
+  defines safe migration steps and ensures backward compatibility
+
 Agents MUST:
 - assign tasks to appropriate subagents
 - avoid overlapping responsibilities
 - prefer parallel analysis when possible
+
+## Subagent Execution Contract
+
+All subagents MUST follow:
+
+- produce structured output:
+  - findings
+  - proposed changes
+  - risks
+
+- never modify code directly unless explicitly assigned
+
+- dependencies:
+  - analyzer → feeds architect
+  - architect → feeds refactorer
+  - refactorer → feeds contract-guard
+  - contract-guard → feeds reviewer
+  - reviewer → feeds tester
+
+- no agent may skip dependency chain
+
+## Refactor Scope Control
+
+Agents MUST:
+
+- limit refactor to ONE phase at a time
+- never perform cross-phase changes in a single execution
+- prefer file-level or package-level changes
+- avoid touching unrelated modules
+
+Large refactors must be decomposed into smaller steps.
 
 ## Phased Refactoring Model
 
@@ -118,6 +165,47 @@ During transformation:
 - validate contracts between layers
 
 Agents MUST ensure safe incremental migration.
+
+## Adapter Pattern Requirement
+
+All external dependencies must be wrapped using adapters:
+
+- define interface in `pkg/`
+- implement adapter in `internal/`
+
+Example:
+- Router → pkg/http
+- Fiber → internal/http/fiber
+- Cache → pkg/cache
+- Redis → internal/cache/redis
+
+Agents MUST NOT bypass adapter layers.
+
+## Dual Mode Awareness
+
+This repository currently operates in two modes:
+
+1. Application Mode (existing behavior)
+2. Framework Mode (target state)
+
+Agents MUST:
+
+- maintain application functionality during transformation
+- gradually extract framework components
+- avoid removing application code prematurely
+- ensure both modes can coexist during migration
+
+## Validation Gate
+
+Before completing a phase, agents MUST verify:
+
+- system compiles successfully
+- core flows still function
+- no direct dependency leaks remain
+- pkg/internal boundaries are respected
+
+If validation fails:
+- rollback or fix before proceeding
 
 ## Purpose
 

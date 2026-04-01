@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	stdhttp "net/http"
+	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
@@ -14,6 +16,84 @@ import (
 type contextKey string
 
 const accessTokenContextKey contextKey = "accessToken"
+
+type JWTTokenPayload struct {
+	UserID       int
+	DepartmentID int
+	Email        string
+	Roles        *map[string]struct{}
+	Permissions  *map[string]struct{}
+	Exp          time.Time
+}
+
+func AuthSecret() string {
+	appCfg, err := LoadYAML[AppConfig](AppConfigPath())
+	if err == nil {
+		if envSecret := os.Getenv("JWT_TOKEN_SECRET"); envSecret != "" {
+			return envSecret
+		}
+		return appCfg.Auth.Secret
+	}
+	return os.Getenv("JWT_TOKEN_SECRET")
+}
+
+func InternalAuthToken() string {
+	appCfg, err := LoadYAML[AppConfig](AppConfigPath())
+	if err == nil {
+		if envToken := os.Getenv("INTERNAL_AUTH_TOKEN"); envToken != "" {
+			return envToken
+		}
+		return appCfg.Auth.InternalAuthToken
+	}
+	return os.Getenv("INTERNAL_AUTH_TOKEN")
+}
+
+func GetAccessToken(c frameworkhttp.Context) string {
+	authHeader := c.Get("Authorization")
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		return authHeader[7:]
+	}
+	return ""
+}
+
+func GenerateJWTToken(secret string, payload JWTTokenPayload) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": payload.UserID,
+		"dept_id": payload.DepartmentID,
+		"email":   payload.Email,
+		"roles":   payload.Roles,
+		"perms":   payload.Permissions,
+		"exp":     payload.Exp.Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+func GetJWTClaims(c frameworkhttp.Context) (jwt.MapClaims, bool, error) {
+	secret := AuthSecret()
+	header := c.Get("Authorization")
+	if header == "" || !strings.HasPrefix(header, "Bearer ") {
+		return nil, false, respondRuntimeError(c, stdhttp.StatusUnauthorized, "Missing or invalid Authorization header")
+	}
+
+	tokenStr := strings.TrimPrefix(header, "Bearer ")
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, false, respondRuntimeError(c, stdhttp.StatusUnauthorized, "Invalid or expired token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["user_id"] == nil {
+		return nil, false, respondRuntimeError(c, stdhttp.StatusUnauthorized, "Invalid token claims")
+	}
+
+	return claims, true, nil
+}
 
 func RequireAuth(secret string) frameworkhttp.Handler {
 	return func(c frameworkhttp.Context) error {
@@ -49,6 +129,15 @@ func RequireAuth(secret string) frameworkhttp.Handler {
 	}
 }
 
+func RequireInternal(token string) frameworkhttp.Handler {
+	return func(c frameworkhttp.Context) error {
+		if c.Get("X-Internal-Token") != token {
+			return c.Status(stdhttp.StatusUnauthorized).SendString("Unauthorized internal call")
+		}
+		return c.Next()
+	}
+}
+
 func UserIDFromContext(c frameworkhttp.Context) (int, bool) {
 	return localInt(c, "userID")
 }
@@ -62,6 +151,125 @@ func AccessTokenFromContext(ctx context.Context) string {
 		return value
 	}
 	return ""
+}
+
+func ContextWithAccessToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, accessTokenContextKey, token)
+}
+
+func GetPermSetFromClaims(c frameworkhttp.Context) (map[string]struct{}, bool) {
+	if v := c.Locals("permSet"); v != nil {
+		switch vv := v.(type) {
+		case map[string]struct{}:
+			if len(vv) > 0 {
+				return vv, true
+			}
+		case *map[string]struct{}:
+			if vv != nil && len(*vv) > 0 {
+				return *vv, true
+			}
+		}
+	}
+	if v := c.Locals("permissions"); v != nil {
+		set := make(map[string]struct{})
+		switch vv := v.(type) {
+		case []string:
+			for _, perm := range vv {
+				if perm = normalizePermission(perm); perm != "" {
+					set[perm] = struct{}{}
+				}
+			}
+		case []any:
+			for _, perm := range vv {
+				if s, ok := perm.(string); ok {
+					if s = normalizePermission(s); s != "" {
+						set[s] = struct{}{}
+					}
+				}
+			}
+		}
+		if len(set) > 0 {
+			c.Locals("permSet", set)
+			return set, true
+		}
+	}
+
+	claims, ok, _ := GetJWTClaims(c)
+	if !ok || claims == nil {
+		return nil, false
+	}
+	raw, exists := claims["perms"]
+	if !exists || raw == nil {
+		return nil, false
+	}
+
+	set := make(map[string]struct{})
+	switch v := raw.(type) {
+	case *map[string]struct{}:
+		if v != nil {
+			for k := range *v {
+				if k = normalizePermission(k); k != "" {
+					set[k] = struct{}{}
+				}
+			}
+		}
+	case map[string]struct{}:
+		for k := range v {
+			if k = normalizePermission(k); k != "" {
+				set[k] = struct{}{}
+			}
+		}
+	case map[string]bool:
+		for k, val := range v {
+			if val {
+				if k = normalizePermission(k); k != "" {
+					set[k] = struct{}{}
+				}
+			}
+		}
+	case map[string]any:
+		for k := range v {
+			if k = normalizePermission(k); k != "" {
+				set[k] = struct{}{}
+			}
+		}
+	case []string:
+		for _, k := range v {
+			if k = normalizePermission(k); k != "" {
+				set[k] = struct{}{}
+			}
+		}
+	case []any:
+		for _, it := range v {
+			if s, ok := it.(string); ok {
+				if s = normalizePermission(s); s != "" {
+					set[s] = struct{}{}
+				}
+			}
+		}
+	case string:
+		if strings.Contains(v, ",") {
+			for _, part := range strings.Split(v, ",") {
+				if part = normalizePermission(part); part != "" {
+					set[part] = struct{}{}
+				}
+			}
+		} else {
+			for _, part := range strings.Fields(v) {
+				if part = normalizePermission(part); part != "" {
+					set[part] = struct{}{}
+				}
+			}
+		}
+	default:
+		return nil, false
+	}
+
+	if len(set) == 0 {
+		return nil, false
+	}
+	c.Locals("permSet", set)
+	return set, true
 }
 
 func claimInt(claims jwt.MapClaims, key string) (int, bool) {
@@ -112,4 +320,8 @@ func respondRuntimeError(c frameworkhttp.Context, statusCode int, message string
 		"statusCode":    statusCode,
 		"statusMessage": message,
 	})
+}
+
+func normalizePermission(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }

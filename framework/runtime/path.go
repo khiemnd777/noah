@@ -33,6 +33,19 @@ func APIPath(parts ...string) string {
 	return filepath.Join(all...)
 }
 
+func AppConfigPath() string {
+	return APIPath("config.yaml")
+}
+
+func APIModulePath(moduleName string, parts ...string) string {
+	all := append([]string{"modules", moduleName}, parts...)
+	return APIPath(all...)
+}
+
+func APIModuleConfigPath(moduleName string) string {
+	return APIModulePath(moduleName, "config.yaml")
+}
+
 func FrameworkModulePath(moduleName string, parts ...string) string {
 	root := FindRepoRoot()
 	all := append([]string{root, "framework", "modules", moduleName}, parts...)

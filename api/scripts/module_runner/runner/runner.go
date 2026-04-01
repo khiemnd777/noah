@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/runtime"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 const moduleStartTimeout = 30 * time.Second
@@ -30,14 +30,14 @@ type RunningModules map[string]RunningModule
 
 func loadModuleConfig(module string) (host string, port int, err error) {
 	// 1️⃣  Ưu tiên runtime registry (dynamic port)
-	if reg, _ := runtime.LoadRegistry(); reg != nil {
+	if reg, _ := frameworkruntime.LoadRegistry("tmp/runtime.json"); reg != nil {
 		if m, ok := reg[module]; ok && m.Port != 0 {
 			return m.Host, m.Port, nil
 		}
 	}
 
 	// 2️⃣  Fallback: đọc config.yaml (cổng tĩnh)
-	path, err := runtime.ModuleConfigPath(module)
+	path, err := frameworkruntime.ModuleConfigPath(module, frameworkruntime.DefaultDiscoveryRoots())
 	if err != nil {
 		return "", 0, err
 	}
@@ -76,7 +76,7 @@ func StartModule(module string) error {
 	}
 
 	fmt.Printf("🚀 Starting module '%s' on %s:%d...\n", module, host, port)
-	entryPath, err := runtime.ModuleEntrypointPath(module)
+	entryPath, err := frameworkruntime.ModuleEntrypointPath(module, frameworkruntime.DefaultDiscoveryRoots())
 	if err != nil {
 		return err
 	}
@@ -158,13 +158,13 @@ func StopAllModules() error {
 }
 
 func SyncRunningModules() error {
-	registry, err := runtime.LoadRegistry()
+	registry, err := frameworkruntime.LoadRegistry("tmp/runtime.json")
 	if err != nil {
 		return fmt.Errorf("cannot load registry: %w", err)
 	}
 
 	running := RunningModules{}
-	descriptors, err := runtime.DiscoverModuleDescriptors()
+	descriptors, err := frameworkruntime.DiscoverModuleDescriptors(nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover modules: %w", err)
 	}
@@ -215,7 +215,7 @@ func SyncRunningModules() error {
 
 func ShowStatus() error {
 	running, _ := LoadRunningModules()
-	descriptors, err := runtime.DiscoverModuleDescriptors()
+	descriptors, err := frameworkruntime.DiscoverModuleDescriptors(nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover modules: %w", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/runtime"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	"gopkg.in/yaml.v3"
 )
 
@@ -28,8 +28,7 @@ type ModuleConfig struct {
 }
 
 func LoadAllModules(dir string) ([]ModuleConfig, error) {
-	// 1) Đọc registry dynamic trước
-	reg, _ := runtime.LoadRegistry() // map[name]→RunningModule
+	reg, _ := frameworkruntime.LoadRegistry("tmp/runtime.json")
 
 	var modules []ModuleConfig
 

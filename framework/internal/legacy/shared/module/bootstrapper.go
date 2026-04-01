@@ -1,0 +1,225 @@
+package module
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"time"
+
+	sharedapp "github.com/khiemnd777/noah_framework/internal/legacy/shared/app"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/cache"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/circuitbreaker"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/config"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/cron"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/db"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/logger"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/runtime"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/utils"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
+	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
+)
+
+type ModuleDeps[T any] struct {
+	Config    *T
+	DBClient  frameworkdb.Client
+	DB        *sql.DB
+	Ent       any
+	SharedEnt any
+	App       frameworkapp.Application
+}
+
+type ModuleOptions[T any] struct {
+	ConfigPath          string
+	ModuleName          string
+	InitEntClient       func(client frameworkdb.Client, cfg *T) (any, error)
+	InitSharedEntClient func(client frameworkdb.Client, cfg *T) (any, error)
+	OnRegistry          func(app frameworkapp.Application, deps *ModuleDeps[T])
+	OnReady             func(deps *ModuleDeps[T])
+}
+
+func StartModule[T any](opts ModuleOptions[T]) {
+	if err := config.EnsureEnvLoaded(); err != nil {
+		fmt.Printf("❌ Failed to load .env: %v\n", err)
+		return
+	}
+
+	logger.Init()
+	logger.SetComponent(opts.ModuleName)
+
+	if err := config.Init(utils.GetAppConfigPath()); err != nil {
+		logger.Error(fmt.Sprintf("❌ Failed to load app config: %v", err))
+		return
+	}
+	logger.Configure(logger.Options{
+		ServiceName:  config.Get().Observability.ServiceName,
+		Environment:  config.Get().Observability.Environment,
+		Level:        config.Get().Observability.Logs.Level,
+		RedactFields: config.Get().Observability.Logs.RedactFields,
+		Component:    opts.ModuleName,
+	})
+
+	cache.InitTTLConstants()
+	if err := frameworkruntime.ConfigureDefaultCache(toFrameworkCacheConfig(config.Get().Redis)); err != nil {
+		logger.Error(fmt.Sprintf("❌ Cannot initialize framework cache: %v", err))
+		return
+	}
+
+	circuitbreaker.Init()
+
+	logger.Info(fmt.Sprintf("🔧 Starting module: %s", opts.ModuleName))
+
+	// Step 1: Load config
+	cfg, err := utils.LoadConfig[T](opts.ConfigPath)
+	if err != nil {
+		logger.Error(fmt.Sprintf("❌ Failed to load module config: %v", err))
+		return
+	}
+
+	// Should use `go run scripts/module_runner status` instead.
+	// srvCfg := any(cfg).(interface{ GetServer() config.ServerConfig }).GetServer()
+	// monitor.InitModuleLifecycle(opts.ModuleName, srvCfg.Port)
+
+	dbCfg := any(cfg).(interface{ GetDatabase() config.DatabaseConfig }).GetDatabase()
+
+	// Step 2: Create DB client
+	dbClient, err := db.NewDatabaseClient(dbCfg)
+	if err != nil {
+		logger.Error(fmt.Sprintf("❌ Cannot create database client: %v", err))
+		return
+	}
+	defer dbClient.Close()
+
+	if err := dbClient.Connect(); err != nil {
+		logger.Error(fmt.Sprintf("❌ Failed to connect to database: %v", err))
+		return
+	}
+
+	// Step 3: Init Ent client
+	var entClient any
+	if opts.InitEntClient != nil {
+		entClient, err = opts.InitEntClient(dbClient, cfg)
+		if err != nil {
+			logger.Error(fmt.Sprintf("❌ Failed to init Ent client: %v", err))
+			return
+		}
+	}
+
+	// Step 3.1: Init Shared Ent client if provided
+	var sharedEntClient any
+	if opts.InitSharedEntClient != nil {
+		sharedEntClient, err = (opts.InitSharedEntClient)(dbClient, cfg)
+		if err != nil {
+			logger.Error(fmt.Sprintf("❌ Failed to init Shared Ent client: %v", err))
+			return
+		}
+	}
+
+	// Step 4: Init framework app
+	appRuntime := frameworkruntime.NewApplication(frameworkapp.Config{
+		BodyLimitMB: config.Get().Server.BodyLimitMB,
+		Host:        config.Get().Server.Host,
+		Port:        config.Get().Server.Port,
+	})
+	appRuntime.Router().Get("/health", func(c frameworkhttp.Context) error {
+		return c.SendStatus(200)
+	})
+
+	// Step 5: Register routes
+	deps := &ModuleDeps[T]{
+		Config:    cfg,
+		DBClient:  dbClient,
+		DB:        fiberSafeSQLDB(dbClient),
+		Ent:       entClient,
+		SharedEnt: sharedEntClient,
+		App:       appRuntime,
+	}
+	opts.OnRegistry(appRuntime, deps)
+
+	if opts.OnReady != nil {
+		opts.OnReady(deps)
+	}
+
+	cron.StartAllCrons()
+
+	// Step 6: Start server
+	StartFiber(appRuntime, opts.ModuleName)
+}
+
+func getDestPort(port int) int {
+	mPort := config.Get().Server.Port
+	return mPort + port
+}
+
+func StartFiber(appRuntime frameworkapp.Application, moduleName string) {
+	// 1) Lấy entry của chính module trong tmp/runtime.json
+	reg, err := runtime.LoadRegistry()
+	if err != nil {
+		logger.Error(fmt.Sprintf("cannot load runtime registry: %v", err))
+		return
+	}
+	rm, ok := reg[moduleName]
+	if !ok || rm.Host == "" || rm.Port == 0 {
+		logger.Error(fmt.Sprintf("runtime entry for [%s] not found or invalid", moduleName))
+		return
+	}
+
+	host, port := rm.Host, rm.Port
+	// destPort := getDestPort(port)
+	addr := fmt.Sprintf("%s:%d", host, port)
+
+	// 2) Bind đúng cổng (KHÔNG ListenOnAvailablePort nữa)
+	reserved, err := sharedapp.ListenOnAvailablePort(host, port)
+
+	if err != nil {
+		logger.Error(fmt.Sprintf("❌ Cannot start listener: %v", err))
+		return
+	}
+
+	// 3) Cập nhật lại runtime (PID + RunAt; port giữ nguyên)
+	_ = runtime.UpdateRegistry(func(registry runtime.Registry) {
+		current := registry[moduleName]
+		current.PID = os.Getpid()
+		current.RunAt = time.Now()
+		current.Host = host
+		current.Port = port
+		registry[moduleName] = current
+	}) // lỗi ghi file không chặn server chạy
+
+	logger.Info(fmt.Sprintf("✅ %s module listening on %s", moduleName, addr))
+
+	// 4) Serve framework-backed app
+	if err := appRuntime.Serve(reserved.Listener); err != nil {
+		logger.Error(fmt.Sprintf("❌ Module app failed: %v", err))
+	}
+}
+
+func fiberSafeSQLDB(client frameworkdb.Client) *sql.DB {
+	sqlDB, err := db.SQLDB(client)
+	if err != nil {
+		return nil
+	}
+	return sqlDB
+}
+
+func toFrameworkCacheConfig(cfg config.RedisConfig) frameworkcache.Config {
+	instances := make(map[string]frameworkcache.InstanceConfig, len(cfg.Instances))
+	for name, instance := range cfg.Instances {
+		instances[name] = frameworkcache.InstanceConfig{
+			DB:        instance.DB,
+			Host:      instance.Host,
+			Password:  instance.Password,
+			Port:      instance.Port,
+			Username:  instance.Username,
+			IsCluster: instance.IsCluster,
+			UseTLS:    instance.UseTLS,
+		}
+	}
+
+	return frameworkcache.Config{
+		DefaultInstance: "cache",
+		Instances:       instances,
+	}
+}

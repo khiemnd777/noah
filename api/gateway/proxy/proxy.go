@@ -9,11 +9,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	fiberws "github.com/gofiber/websocket/v2"
-	appbridge "github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
@@ -85,7 +84,7 @@ func RegisterReverseProxy(app frameworkapp.Application, route string, targets []
 	}
 
 	app.Router().All(route+"/*", func(c frameworkhttp.Context) error {
-		fiberCtx := appbridge.MustFiberContext(c)
+		fiberCtx := frameworkruntime.MustFiberContext(c)
 		target := lb.NextTarget()
 
 		// ✅ WS: bypass circuit breaker + use WS bridge proxy
@@ -126,7 +125,7 @@ func RegisterReverseProxy(app frameworkapp.Application, route string, targets []
 			if auth := fiberCtx.Get("Authorization"); auth != "" {
 				req.Header.Set("Authorization", auth)
 			}
-			req.Header.Set("X-Internal-Token", utils.GetInternalToken())
+			req.Header.Set("X-Internal-Token", frameworkruntime.InternalAuthToken())
 
 			logger.Debug(fmt.Sprintf("[Gateway] Proxy %s → %s", fiberCtx.OriginalURL(), target.String()))
 		}

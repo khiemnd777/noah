@@ -11,13 +11,13 @@ import (
 	"github.com/khiemnd777/noah_api/scripts/module_runner/runner"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/runtime"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func Start(app frameworkapp.Application) error {
-	reg, reserved, err := runtime.GenerateRegistry(runtime.DefaultDiscoveryRoots())
+	reg, reserved, err := frameworkruntime.GenerateRegistry("tmp/runtime.json", frameworkruntime.DefaultDiscoveryRoots(), config.Get().Server.Port)
 	if err != nil {
 		return fmt.Errorf("failed to load modules: %w", err)
 	}
@@ -31,7 +31,7 @@ func Start(app frameworkapp.Application) error {
 	for name, m := range reg {
 		wg.Add(1)
 
-		go func(name string, m runtime.RunningModule) {
+		go func(name string, m frameworkruntime.RunningModule) {
 			defer wg.Done()
 
 			logger.Info(fmt.Sprintf("Launching module [%s]...", name))

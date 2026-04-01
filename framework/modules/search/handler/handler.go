@@ -1,0 +1,60 @@
+package handler
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/khiemnd777/noah_framework/modules/search/config"
+	"github.com/khiemnd777/noah_framework/modules/search/model"
+	"github.com/khiemnd777/noah_framework/modules/search/service"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/app"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/app/client_error"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/module"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/modules/search"
+	"github.com/khiemnd777/noah_framework/internal/legacy/shared/utils"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
+)
+
+type SearchHandler struct {
+	svc  service.SearchService
+	deps *module.ModuleDeps[config.ModuleConfig]
+}
+
+func NewSearchHandler(svc service.SearchService, deps *module.ModuleDeps[config.ModuleConfig]) *SearchHandler {
+	return &SearchHandler{svc: svc, deps: deps}
+}
+
+func (h *SearchHandler) RegisterRoutes(router frameworkhttp.Router) {
+	app.RouterGet(router, "/", h.Search)
+}
+
+func (h *SearchHandler) Search(c frameworkhttp.Context) error {
+	q := utils.GetQueryAsString(c, "q")
+	entityType := utils.GetQueryAsString(c, "entityType")
+	if entityType == "" {
+		entityType = utils.GetQueryAsString(c, "entity_type")
+	}
+	deptID, _ := utils.GetDeptIDInt(c)
+
+	var types []string
+	if entityType != "" {
+		types = []string{entityType}
+	}
+
+	rows, err := h.svc.Search(c.UserContext(), model.Options{
+		Query:           q,
+		Types:           types,
+		OrgID:           utils.Ptr(int64(deptID)),
+		UseTrgmFallback: true,
+	})
+
+	if err != nil {
+		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, err.Error())
+	}
+
+	filtered := search.GuardSearch(c, h.deps.Ent.(*generated.Client), rows)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"items": filtered,
+		"total": len(filtered),
+	})
+}

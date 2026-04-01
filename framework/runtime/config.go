@@ -78,6 +78,17 @@ type RedisConfig struct {
 	Instances map[string]RedisInstanceConfig `yaml:"instances"`
 }
 
+type CircuitBreakerConfig struct {
+	Interval            time.Duration `yaml:"interval"`
+	Timeout             time.Duration `yaml:"timeout"`
+	ConsecutiveFailures int           `yaml:"consecutivefailures"`
+}
+
+type RetryConfig struct {
+	MaxAttempts int           `yaml:"maxattempts"`
+	Delay       time.Duration `yaml:"delay"`
+}
+
 type ObservabilityLogsConfig struct {
 	Enabled      bool     `yaml:"enabled"`
 	Level        string   `yaml:"level"`
@@ -101,13 +112,15 @@ type ObservabilityConfig struct {
 }
 
 type AppConfig struct {
-	Project       ProjectConfig       `yaml:"project"`
-	Server        ServerConfig        `yaml:"server"`
-	Auth          AuthConfig          `yaml:"auth"`
-	Database      DatabaseConfig      `yaml:"database"`
-	Cache         CacheConfig         `yaml:"cache"`
-	Redis         RedisConfig         `yaml:"redis"`
-	Observability ObservabilityConfig `yaml:"observability"`
+	Project        ProjectConfig        `yaml:"project"`
+	Server         ServerConfig         `yaml:"server"`
+	Auth           AuthConfig           `yaml:"auth"`
+	Database       DatabaseConfig       `yaml:"database"`
+	Cache          CacheConfig          `yaml:"cache"`
+	Redis          RedisConfig          `yaml:"redis"`
+	CircuitBreaker CircuitBreakerConfig `yaml:"circuitbreaker"`
+	Retry          RetryConfig          `yaml:"retry"`
+	Observability  ObservabilityConfig  `yaml:"observability"`
 }
 
 var loadDotEnvOnce sync.Once

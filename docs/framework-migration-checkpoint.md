@@ -12,6 +12,14 @@
 - Phase 7: Partial
 
 ### Completed This Run
+- Removed the remaining built-in module directories from `api/modules/*` and left only `api/modules/main` as the application-owned feature area.
+- Moved the remaining built-in module implementations into `framework/modules/*`: `auditlog`, `auth`, `metadata`, `notification`, `photo`, `rbac`, `realtime`, `search`, `token`, and `user`; `observability` remained framework-owned and its API bridge was removed.
+- Internalized the remaining shared support surface required by those modules into `framework/internal/legacy/shared/*` so framework modules no longer import `api/shared/*` directly while preserving current runtime behavior during the final migration.
+- Confirmed framework module discovery, entrypoint resolution, and module-runner sync work with built-ins owned only by `framework/modules/*`.
+- Extracted remaining legacy shared runtime ownership into `framework/runtime` for circuit breaker, retry-aware HTTP wrappers, HTTP client, JWT/auth context helpers, pubsub, module discovery/registry, port/process helpers, and generic HTTP param parsing.
+- Reduced `api/shared/app` framework helpers (`fiber_listener`, `fiber_parser`, `fiber_router`, `fiber_wrapper`, `http_client`, `native_bridge`) to compatibility shims backed by `framework/runtime`.
+- Reduced `api/shared/runtime/registry`, `api/shared/circuitbreaker`, `api/shared/pubsub`, and framework-worthy `api/shared/utils/*` helpers (`auth`, `config`, `fiber_user_utils`, `jwtutil`, `module_utils`, `net`, `param_utils`, `token_context`, `util`) to framework-backed compatibility shims.
+- Switched gateway/module-runner runtime consumers to framework-owned implementations for module registry generation, module discovery/config resolution, Fiber context bridging, and internal-token lookup.
 - Removed the API-owned `attribute`, `folder`, and `profile` module trees entirely after migrating runtime ownership to `framework/modules/*`.
 - Added a framework-owned module bootstrap path in `framework/runtime/*` for built-in module config loading, DB/cache wiring, runtime registry binding, and JWT auth context setup so framework modules can run without API-side `main.go` shims.
 - Converted `framework/modules/attribute/main.go` from a placeholder into a runnable framework-owned entrypoint using the new runtime bootstrap and framework auth middleware.
@@ -41,6 +49,13 @@
 
 ### Validation Snapshot
 - No frontend files changed.
+- `framework/`: `GOCACHE="$PWD/.gocache" go test ./...` passed with all built-in modules present under `framework/modules/*`.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./...` passed after removing all built-in `api/modules/*` directories except `api/modules/main`.
+- `api/`: `GOCACHE="$PWD/.gocache" go run scripts/module_runner/main.go sync` discovered and synchronized built-ins from framework-owned module roots after API-side built-in module removal.
+- `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime/...` passed.
+- `framework/`: `GOCACHE="$PWD/.gocache" go test ./...` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./shared/... ./gateway/... ./scripts/module_runner/runner` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./...` passed.
 - `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/attribute/... ./modules/folder/... ./modules/profile/...` passed.
 - `framework/`: `go test ./...` passed.
 - `api/`: `GOCACHE="$PWD/.gocache" go test ./shared/runtime ./scripts/module_runner/runner ./gateway/...` passed.
@@ -60,7 +75,4 @@
 - Profile is now discovered from `framework/modules/profile`; `api/modules/profile` no longer exists.
 
 ### Remaining Work
-- Complete API-side migration for module boot composition and replace remaining raw DB/Fiber bridging with stable framework-native contracts.
-- Reduce remaining Fiber-native response/body helper usage inside handler implementations by introducing stable HTTP response helpers where useful.
-- Reduce remaining direct Redis and raw SQL usage outside the newly introduced framework boundaries.
-- Move the next built-in module into framework ownership, then remove more API-side composition assumptions from module startup over time.
+- Final built-in module migration is complete. Remaining cleanup is stabilization-oriented: continue replacing legacy internalized shims in `framework/internal/legacy/shared/*` with framework-native contracts and runtime helpers where useful, without reintroducing `api/modules/*` ownership.

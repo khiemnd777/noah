@@ -12,6 +12,11 @@
 - Phase 7: Partial
 
 ### Completed This Run
+- Removed the API-owned `attribute`, `folder`, and `profile` module trees entirely after migrating runtime ownership to `framework/modules/*`.
+- Added a framework-owned module bootstrap path in `framework/runtime/*` for built-in module config loading, DB/cache wiring, runtime registry binding, and JWT auth context setup so framework modules can run without API-side `main.go` shims.
+- Converted `framework/modules/attribute/main.go` from a placeholder into a runnable framework-owned entrypoint using the new runtime bootstrap and framework auth middleware.
+- Migrated the built-in `folder` module into `framework/modules/folder/*` with framework-owned handler, service, SQL repository, model, module wiring, and config files.
+- Migrated the built-in `profile` module into `framework/modules/profile/*` with framework-owned handler, service, SQL repository, model, module wiring, and config files.
 - Moved the built-in attribute module implementation out of `api/modules/attribute/*` and into `framework/modules/attribute/*`, including handler, service, repository, model, module wiring, and framework-owned module config files.
 - Replaced the attribute module's API-owned Ent repository with a framework-owned SQL repository that uses `framework/pkg/db` plus the runtime SQL bridge only inside `framework/modules/attribute/repository`.
 - Reduced `api/modules/attribute` to a composition-only shim: framework module config bridging and route/auth composition through the existing module bootstrap path.
@@ -36,6 +41,11 @@
 
 ### Validation Snapshot
 - No frontend files changed.
+- `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/attribute/... ./modules/folder/... ./modules/profile/...` passed.
+- `framework/`: `go test ./...` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./shared/runtime ./scripts/module_runner/runner ./gateway/...` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./...` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go run scripts/module_runner/main.go sync` resolved `attribute`, `folder`, and `profile` through module discovery after the API module directories were removed.
 - `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/attribute/...` passed.
 - `api/`: `GOCACHE="$PWD/.gocache" go test ./modules/attribute/... ./shared/module` passed.
 - `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/observability/...` passed.
@@ -46,6 +56,8 @@
 - `framework/pkg/` no longer exposes raw `*sql.DB` or Redis client types.
 - Observability is now discovered from `framework/modules/observability` through the existing multi-root loader, with `api/modules/observability/main.go` retained only as a composition/startup bridge.
 - Attribute is now discovered from `framework/modules/attribute` through the existing multi-root loader, with `api/modules/attribute/main.go` retained only as a composition/startup bridge.
+- Folder is now discovered from `framework/modules/folder`; `api/modules/folder` no longer exists.
+- Profile is now discovered from `framework/modules/profile`; `api/modules/profile` no longer exists.
 
 ### Remaining Work
 - Complete API-side migration for module boot composition and replace remaining raw DB/Fiber bridging with stable framework-native contracts.

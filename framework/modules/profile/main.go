@@ -3,8 +3,7 @@ package main
 import (
 	"log"
 
-	frameworkattribute "github.com/khiemnd777/noah_framework/modules/attribute/module"
-	frameworkservice "github.com/khiemnd777/noah_framework/modules/attribute/service"
+	frameworkprofile "github.com/khiemnd777/noah_framework/modules/profile/module"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
@@ -17,8 +16,8 @@ type moduleConfig struct {
 
 func main() {
 	err := frameworkruntime.StartModule[moduleConfig](frameworkruntime.ModuleOptions[moduleConfig]{
-		Name:       "attribute",
-		ConfigPath: frameworkruntime.FrameworkModulePath("attribute", "config.yaml"),
+		Name:       "profile",
+		ConfigPath: frameworkruntime.FrameworkModulePath("profile", "config.yaml"),
 		GetServer: func(cfg *moduleConfig) frameworkruntime.ServerConfig {
 			return cfg.Server
 		},
@@ -30,15 +29,13 @@ func main() {
 				deps.Config.Server.Route,
 				frameworkruntime.RequireAuth(deps.AppConfig.Auth.Secret),
 			)
-			return frameworkattribute.Register(router, frameworkattribute.Options{
-				Config: frameworkattribute.Config{
-					AutoMigrate: deps.Config.Database.AutoMigrate,
-					Cache: frameworkservice.CacheConfig{
-						ShortTTL: deps.AppConfig.Cache.TTL.Short,
-						LongTTL:  deps.AppConfig.Cache.TTL.Long,
+			return frameworkprofile.Register(router, frameworkprofile.Options{
+				Database: deps.DB,
+				Config: frameworkprofile.Config{
+					Cache: frameworkprofile.CacheConfig{
+						MediumTTL: deps.AppConfig.Cache.TTL.Medium,
 					},
 				},
-				Database: deps.DBClient,
 			})
 		},
 	})

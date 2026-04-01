@@ -30,6 +30,7 @@
 # === Config & secrets ===
 *.env
 *.env.*
+!.env.sample
 *.secret.yaml
 *.yaml
 !version.yaml

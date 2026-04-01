@@ -32,7 +32,7 @@ func main() {
 		logger.Error(fmt.Sprintf("❌ Failed to connect to database: %v", err))
 	}
 
-	sqlDB := dbClient.GetSQL()
+	sqlDB := db.MustSQLDB(dbClient)
 	_, err = bootstrap.EntBootstrap(dbCfg.Provider, sqlDB, func(drv *entsql.Driver) any {
 		return generated.NewClient(generated.Driver(drv))
 	}, cfg.Database.AutoMigrate)

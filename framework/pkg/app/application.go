@@ -9,7 +9,9 @@ type Config struct {
 }
 
 type Application interface {
+	Native() any
 	Router() frameworkhttp.Router
 	Listen(addr string) error
+	Serve(listener any) error
 	Run() error
 }

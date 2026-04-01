@@ -44,7 +44,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sqlDB := dbClient.GetSQL() // Returns *sql.DB if Postgres, but nil Mongo
+	sqlDB := db.MustSQLDB(dbClient)
 
 	_, entErr := ent.EntBootstrap(dbCfg.Provider, sqlDB, func(drv *entsql.Driver) any {
 		return generated.NewClient(generated.Driver(drv))

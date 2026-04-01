@@ -1,17 +1,15 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 
 	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 
 	"github.com/khiemnd777/noah_api/shared/config"
-	dbinterface "github.com/khiemnd777/noah_api/shared/db/interface"
 )
 
-func NewDatabaseClient(cfg config.DatabaseConfig) (dbinterface.DatabaseClient, error) {
+func NewDatabaseClient(cfg config.DatabaseConfig) (frameworkdb.Client, error) {
 	client, err := frameworkruntime.NewDatabaseClient(frameworkdb.Config{
 		Provider:    cfg.Provider,
 		AutoMigrate: cfg.AutoMigrate,
@@ -31,26 +29,5 @@ func NewDatabaseClient(cfg config.DatabaseConfig) (dbinterface.DatabaseClient, e
 	if err != nil {
 		return nil, fmt.Errorf("unsupported database provider: %s", cfg.Provider)
 	}
-	return &frameworkClientAdapter{client: client}, nil
-}
-
-type frameworkClientAdapter struct {
-	client frameworkdb.Client
-}
-
-func (a *frameworkClientAdapter) Connect() error {
-	return a.client.Connect()
-}
-
-func (a *frameworkClientAdapter) Close() error {
-	return a.client.Close()
-}
-
-func (a *frameworkClientAdapter) GetSQL() *sql.DB {
-	bridge, ok := a.client.(frameworkdb.SQLBridge)
-	if !ok {
-		return nil
-	}
-	sqlDB, _ := bridge.SQLDB().(*sql.DB)
-	return sqlDB
+	return client, nil
 }

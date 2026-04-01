@@ -9,16 +9,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	appLogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/khiemnd777/noah_api/shared/app"
-	"github.com/khiemnd777/noah_api/shared/app/fiber_app"
 	"github.com/khiemnd777/noah_api/shared/cache"
 	"github.com/khiemnd777/noah_api/shared/circuitbreaker"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/cron"
 	"github.com/khiemnd777/noah_api/shared/db"
 	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/redis"
 	"github.com/khiemnd777/noah_api/shared/runtime"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 type ModuleDeps[T any] struct {
@@ -26,15 +27,15 @@ type ModuleDeps[T any] struct {
 	DB        *sql.DB
 	Ent       any
 	SharedEnt any
-	App       *fiber.App
+	App       frameworkapp.Application
 }
 
 type ModuleOptions[T any] struct {
 	ConfigPath          string
 	ModuleName          string
-	InitEntClient       func(provider string, db *sql.DB, cfg *T) (any, error)
-	InitSharedEntClient func(provider string, db *sql.DB, cfg *T) (any, error)
-	OnRegistry          func(app *fiber.App, deps *ModuleDeps[T])
+	InitEntClient       func(client frameworkdb.Client, cfg *T) (any, error)
+	InitSharedEntClient func(client frameworkdb.Client, cfg *T) (any, error)
+	OnRegistry          func(app frameworkapp.Application, deps *ModuleDeps[T])
 	OnReady             func(deps *ModuleDeps[T])
 }
 
@@ -60,8 +61,6 @@ func StartModule[T any](opts ModuleOptions[T]) {
 	})
 
 	cache.InitTTLConstants()
-
-	redis.Init()
 
 	circuitbreaker.Init()
 
@@ -95,9 +94,8 @@ func StartModule[T any](opts ModuleOptions[T]) {
 
 	// Step 3: Init Ent client
 	var entClient any
-	sqlDB := dbClient.GetSQL()
 	if opts.InitEntClient != nil {
-		entClient, err = opts.InitEntClient(any(cfg).(interface{ GetDatabase() config.DatabaseConfig }).GetDatabase().Provider, sqlDB, cfg)
+		entClient, err = opts.InitEntClient(dbClient, cfg)
 		if err != nil {
 			logger.Error(fmt.Sprintf("❌ Failed to init Ent client: %v", err))
 			return
@@ -107,15 +105,24 @@ func StartModule[T any](opts ModuleOptions[T]) {
 	// Step 3.1: Init Shared Ent client if provided
 	var sharedEntClient any
 	if opts.InitSharedEntClient != nil {
-		sharedEntClient, err = (opts.InitSharedEntClient)(any(cfg).(interface{ GetSharedDatabase() config.DatabaseConfig }).GetSharedDatabase().Provider, sqlDB, cfg)
+		sharedEntClient, err = (opts.InitSharedEntClient)(dbClient, cfg)
 		if err != nil {
 			logger.Error(fmt.Sprintf("❌ Failed to init Shared Ent client: %v", err))
 			return
 		}
 	}
 
-	// Step 4: Init Fiber app
-	fiberApp := fiber_app.NewFiberApp()
+	// Step 4: Init framework app
+	appRuntime := frameworkruntime.NewApplication(frameworkapp.Config{
+		BodyLimitMB: config.Get().Server.BodyLimitMB,
+		Host:        config.Get().Server.Host,
+		Port:        config.Get().Server.Port,
+	})
+	fiberApp, err := app.FiberApplication(appRuntime)
+	if err != nil {
+		logger.Error(fmt.Sprintf("❌ Failed to bind framework app to module runtime: %v", err))
+		return
+	}
 	fiberApp.Use(appLogger.New())
 
 	fiberApp.Get("/health", func(c *fiber.Ctx) error {
@@ -125,12 +132,12 @@ func StartModule[T any](opts ModuleOptions[T]) {
 	// Step 5: Register routes
 	deps := &ModuleDeps[T]{
 		Config:    cfg,
-		DB:        sqlDB,
+		DB:        fiberSafeSQLDB(dbClient),
 		Ent:       entClient,
 		SharedEnt: sharedEntClient,
-		App:       fiberApp,
+		App:       appRuntime,
 	}
-	opts.OnRegistry(fiberApp, deps)
+	opts.OnRegistry(appRuntime, deps)
 
 	if opts.OnReady != nil {
 		opts.OnReady(deps)
@@ -139,7 +146,7 @@ func StartModule[T any](opts ModuleOptions[T]) {
 	cron.StartAllCrons()
 
 	// Step 6: Start server
-	StartFiber(fiberApp, opts.ModuleName)
+	StartFiber(appRuntime, opts.ModuleName)
 }
 
 func getDestPort(port int) int {
@@ -147,7 +154,7 @@ func getDestPort(port int) int {
 	return mPort + port
 }
 
-func StartFiber(fiberApp *fiber.App, moduleName string) {
+func StartFiber(appRuntime frameworkapp.Application, moduleName string) {
 	// 1) Lấy entry của chính module trong tmp/runtime.json
 	reg, err := runtime.LoadRegistry()
 	if err != nil {
@@ -184,8 +191,16 @@ func StartFiber(fiberApp *fiber.App, moduleName string) {
 
 	logger.Info(fmt.Sprintf("✅ %s module listening on %s", moduleName, addr))
 
-	// 4) Serve Fiber
-	if err := fiberApp.Listener(reserved.Listener); err != nil {
-		logger.Error(fmt.Sprintf("❌ Fiber app failed: %v", err))
+	// 4) Serve framework-backed app
+	if err := appRuntime.Serve(reserved.Listener); err != nil {
+		logger.Error(fmt.Sprintf("❌ Module app failed: %v", err))
 	}
+}
+
+func fiberSafeSQLDB(client frameworkdb.Client) *sql.DB {
+	sqlDB, err := db.SQLDB(client)
+	if err != nil {
+		return nil
+	}
+	return sqlDB
 }

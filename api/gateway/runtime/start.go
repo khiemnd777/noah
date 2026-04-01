@@ -15,15 +15,9 @@ import (
 	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
-	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func Start(app frameworkapp.Application) error {
-	fiberApp, ok := frameworkruntime.AsFiberApp(app)
-	if !ok {
-		return fmt.Errorf("gateway requires a fiber-backed application during migration")
-	}
-
 	reg, reserved, err := runtime.GenerateRegistry(utils.GetFullPath("modules"))
 	if err != nil {
 		return fmt.Errorf("failed to load modules: %w", err)
@@ -54,7 +48,7 @@ func Start(app frameworkapp.Application) error {
 			if m.External {
 				target := fmt.Sprintf("http://%s:%d", m.Host, m.Port)
 				logger.Info(fmt.Sprintf("Registering route %s → %s", m.Route, target))
-				err := proxy.RegisterReverseProxy(fiberApp, m.Route, []string{target})
+				err := proxy.RegisterReverseProxy(app, m.Route, []string{target})
 				if err != nil {
 					logger.Warn(fmt.Sprintf("Failed to register module [%s]", name), err)
 				}

@@ -86,9 +86,9 @@ func withSQLDB(run func(*sql.DB) error) error {
 		return fmt.Errorf("connect DB failed: %w", err)
 	}
 
-	sqlDB := dbClient.GetSQL()
-	if sqlDB == nil {
-		return fmt.Errorf("database provider %q does not support SQL migrations", dbCfg.Provider)
+	sqlDB, err := db.SQLDB(dbClient)
+	if err != nil {
+		return fmt.Errorf("database provider %q does not support SQL migrations: %w", dbCfg.Provider, err)
 	}
 
 	return run(sqlDB)

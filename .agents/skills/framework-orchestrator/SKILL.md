@@ -1,98 +1,91 @@
-# framework-orchestrator
+# Framework Orchestrator
 
-## Purpose
-Run the full repository transformation from application-monorepo shape toward extracted framework shape with minimal supervision.
+You are the main automation engine for framework transformation.
 
-This skill is the orchestration entrypoint.
-It should plan, analyze, execute, review, fix safe issues, checkpoint progress, and continue phase by phase.
+You MUST run the full pipeline WITHOUT human intervention.
 
-## Required context
-Before orchestration, read:
-- `AGENTS.md`
-- `docs/framework-migration-plan.md`
-- any existing checkpoint files in `docs/` if they exist
+---
 
-## Core operating model
-Run the migration as a staged pipeline:
-1. load migration source of truth
-2. determine current phase status
-3. plan current phase
-4. use subagents for analysis where useful
-5. execute one task at a time
-6. review after each meaningful task or small task group
-7. auto-fix only safe, local issues
-8. checkpoint progress
-9. continue until the phase is complete
-10. move to next phase only after phase validation passes
+## Execution Loop
 
-## Subagent policy
-You may delegate bounded analysis work to these roles when useful:
-- analyzer
-- architect
-- migration-planner
-- contract-guard
-- reviewer
-- tester
+For each phase in order:
 
-Subagents should primarily analyze and report.
-Do not let multiple subagents perform overlapping code edits.
-Prefer centralized execution in the main thread.
+1. Run $framework-plan for the phase
 
-## Auto-fix policy
-You may auto-fix only when all are true:
-- the fix is local and clearly scoped
-- it does not introduce a new abstraction beyond the approved phase
-- it does not expand the execution scope materially
-- it does not create a breaking FE/API contract change
+2. For each task:
+   a. Execute using $framework-execute
+   b. Immediately run $framework-review
 
-If the issue is architectural, ambiguous, or cross-phase, checkpoint and stop instead of improvising.
+3. If review fails:
+   - identify blocking issues
+   - FIX them automatically
+   - re-run review
 
-## Checkpoint policy
-After each phase, write or update a checkpoint file in `docs/`.
-Recommended file name pattern:
-- `docs/framework-migration-checkpoint.md`
+4. Only continue when review PASSES
 
-The checkpoint should include:
-- completed phases/tasks
-- current repo state summary
-- validations passed/failed
-- remaining risks
-- next intended phase/task
+---
 
-## Final report policy
-At the end of the full run, produce a final report covering:
-- completed phases
-- major structural changes
-- public API surface created
-- adapters introduced
-- compatibility verification summary
-- remaining risks or deferred items
+## Validation Gate (MANDATORY)
 
-## Repo-specific migration policy
-Respect the transformation strategy for this repo:
-- extract a framework layer without destroying the current application too early
-- treat `api/` as the consumer/reference implementation during migration
-- keep `fe/` compatible throughout
-- avoid simultaneous broad refactors across `api/` and `fe/`
+Before moving to next phase, verify:
 
-## Stop conditions
-Stop and checkpoint instead of guessing when:
-- the migration plan is missing or contradictory
-- a phase boundary becomes ambiguous
-- a change would require destructive rewrite without validation
-- compatibility risk to `fe/` cannot be assessed safely
-- repeated review failures indicate the plan needs adjustment
+- code compiles
+- no direct dependency leaks (Fiber, Redis, DB)
+- pkg/internal boundary respected
 
-## Output style during orchestration
-Keep interim messages concise and operational.
-For each completed task, record:
-- task completed
-- files changed
-- validation result
-- blockers if any
+If validation fails:
+- FIX automatically
+- retry validation
 
-## Never do
-- do not merge phases into one large implementation burst
-- do not silently bypass reviews
-- do not delete working application code before replacement is proven
-- do not expose implementation details through `framework/pkg`
+---
+
+## Subagent Usage
+
+Use subagents to:
+
+- detect remaining coupling
+- validate architecture
+- propose fixes
+
+Never skip analysis when uncertainty exists.
+
+---
+
+## Control Inversion Requirement
+
+Ensure:
+
+- framework owns runtime
+- api does NOT control system boot
+- api acts only as consumer
+
+---
+
+## Safety Rules
+
+- NEVER break api runtime
+- NEVER break FE/API contract
+- NEVER skip review
+- NEVER proceed with unresolved issues
+
+---
+
+## Stop Condition
+
+Only stop when:
+
+- all phases completed
+- all validation gates passed
+- no critical coupling remains
+
+---
+
+## Final Output
+
+Produce:
+
+1. migration summary
+2. list of remaining risks (if any)
+3. confirmation:
+   - framework owns system
+   - api is fully decoupled

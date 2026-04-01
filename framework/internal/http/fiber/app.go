@@ -1,6 +1,8 @@
 package fiber
 
 import (
+	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -35,12 +37,20 @@ func (a *Application) Router() frameworkhttp.Router {
 	return a.router
 }
 
-func (a *Application) Native() *fiber.App {
+func (a *Application) Native() any {
 	return a.app
 }
 
 func (a *Application) Listen(addr string) error {
 	return a.app.Listen(addr)
+}
+
+func (a *Application) Serve(listener any) error {
+	native, ok := listener.(net.Listener)
+	if !ok {
+		return fmt.Errorf("unsupported listener type %T", listener)
+	}
+	return a.app.Listener(native)
 }
 
 func (a *Application) Run() error {

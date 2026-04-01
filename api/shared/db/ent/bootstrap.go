@@ -5,9 +5,27 @@ import (
 	"database/sql"
 	"fmt"
 
+	shareddb "github.com/khiemnd777/noah_api/shared/db"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/logger"
+	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
 )
+
+func InitEntClientFromDatabase(client frameworkdb.Client, builder EntClientBuilder) (any, error) {
+	sqlDB, err := shareddb.SQLDB(client)
+	if err != nil {
+		return nil, err
+	}
+	return InitEntClient(client.Provider(), sqlDB, builder)
+}
+
+func EntBootstrapFromDatabase(client frameworkdb.Client, builder EntClientBuilder, autoMigrate bool) (any, error) {
+	sqlDB, err := shareddb.SQLDB(client)
+	if err != nil {
+		return nil, err
+	}
+	return EntBootstrap(client.Provider(), sqlDB, builder, autoMigrate)
+}
 
 func EntBootstrap(provider string, db *sql.DB, builder EntClientBuilder, autoMigrate bool) (any, error) {
 	rawClient, err := InitEntClient(provider, db, builder)

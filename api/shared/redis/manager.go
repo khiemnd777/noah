@@ -42,10 +42,12 @@ func Init() {
 
 // Get returns redis client by instance name (e.g. "cache", "session")
 func GetInstance(name string) *redis.Client {
+	Init()
 	return clients[name]
 }
 
 func Get(name, key string) (string, error) {
+	Init()
 	rdb := GetInstance(name)
 	val, err := rdb.Get(ctx, key).Result()
 	if err == redis.Nil {
@@ -67,6 +69,7 @@ func GetInt(name, key string) (int, error) {
 }
 
 func Set(name, key string, value interface{}, ttl time.Duration) error {
+	Init()
 	rdb := GetInstance(name)
 	err := rdb.Set(ctx, key, value, ttl).Err()
 	if err != nil {
@@ -76,6 +79,7 @@ func Set(name, key string, value interface{}, ttl time.Duration) error {
 }
 
 func Incr(name, key string) (int64, error) {
+	Init()
 	rdb := GetInstance(name)
 	incr := rdb.Incr(ctx, key)
 	val, err := incr.Result()
@@ -86,6 +90,7 @@ func Incr(name, key string) (int64, error) {
 }
 
 func Del(name, key string) error {
+	Init()
 	rdb := GetInstance(name)
 	err := rdb.Del(ctx, key).Err()
 	if err != nil {
@@ -95,6 +100,7 @@ func Del(name, key string) error {
 }
 
 func DelByPattern(name string, pattern string) error {
+	Init()
 	rdb := GetInstance(name)
 
 	var cursor uint64
@@ -122,6 +128,7 @@ func DelByPattern(name string, pattern string) error {
 }
 
 func Exists(name, key string) (bool, error) {
+	Init()
 	rdb := GetInstance(name)
 	count, err := rdb.Exists(ctx, key).Result()
 	if err != nil {
@@ -132,6 +139,7 @@ func Exists(name, key string) (bool, error) {
 }
 
 func ScanKeys(name, pattern string) ([]string, error) {
+	Init()
 	rdb := GetInstance(name)
 	var cursor uint64
 	var keys []string
@@ -151,6 +159,7 @@ func ScanKeys(name, pattern string) ([]string, error) {
 }
 
 func TTL(name, key string) (time.Duration, error) {
+	Init()
 	rdb := GetInstance(name)
 	ttl, err := rdb.TTL(ctx, key).Result()
 	if err != nil {

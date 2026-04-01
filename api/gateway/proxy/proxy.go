@@ -9,8 +9,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	fiberws "github.com/gofiber/websocket/v2"
+	appbridge "github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
@@ -75,13 +77,18 @@ func isWebSocketRequest(c *fiber.Ctx) bool {
 }
 
 // RegisterReverseProxy mounts a reverse proxy at given route with load balancing
-func RegisterReverseProxy(app *fiber.App, route string, targets []string) error {
+func RegisterReverseProxy(app frameworkapp.Application, route string, targets []string) error {
+	fiberApp, err := appbridge.FiberApplication(app)
+	if err != nil {
+		return err
+	}
+
 	lb, err := NewLoadBalancer(targets)
 	if err != nil {
 		return err
 	}
 
-	app.All(route+"/*", func(c *fiber.Ctx) error {
+	fiberApp.All(route+"/*", func(c *fiber.Ctx) error {
 		target := lb.NextTarget()
 
 		// ✅ WS: bypass circuit breaker + use WS bridge proxy

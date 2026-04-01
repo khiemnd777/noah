@@ -1,12 +1,10 @@
 package main
 
 import (
-	"database/sql"
-
 	entsql "entgo.io/ent/dialect/sql"
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/modules/photo/config"
 	"github.com/khiemnd777/noah_api/modules/photo/jobs"
+	sharedapp "github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/cron"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/middleware"
@@ -18,23 +16,25 @@ import (
 	"github.com/khiemnd777/noah_api/modules/photo/service"
 	"github.com/khiemnd777/noah_api/shared/module"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
 )
 
 func main() {
 	module.StartModule(module.ModuleOptions[config.ModuleConfig]{
 		ConfigPath: utils.GetModuleConfigPath("photo"),
 		ModuleName: "photo",
-		InitEntClient: func(provider string, db *sql.DB, cfg *config.ModuleConfig) (any, error) {
-			return ent.EntBootstrap(provider, db, func(drv *entsql.Driver) any {
+		InitEntClient: func(client frameworkdb.Client, cfg *config.ModuleConfig) (any, error) {
+			return ent.EntBootstrapFromDatabase(client, func(drv *entsql.Driver) any {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 
 		},
-		OnRegistry: func(app *fiber.App, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			repo := repository.NewPhotoRepository(deps.Ent.(*generated.Client), deps)
 			svc := service.NewPhotoService(repo, deps)
 			h := handler.NewPhotoHandler(svc, deps)
-			h.RegisterRoutes(app.Group(utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
+			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
 
 			cron.RegisterJob(jobs.NewClearDeletedPhotoJob(svc))
 		},

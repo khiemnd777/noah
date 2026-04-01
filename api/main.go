@@ -17,7 +17,6 @@ import (
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/gen"
 	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/redis"
 	"github.com/khiemnd777/noah_api/shared/utils"
 	"github.com/khiemnd777/noah_api/shared/worker"
 	_ "github.com/khiemnd777/noah_api/starter"
@@ -76,14 +75,11 @@ func main() {
 		log.Fatalf("Cannot initialize framework cache: %v", err)
 	}
 
-	// Initialize Redis
-	redis.Init()
-
 	if err := gen.GenerateEntClient(); err != nil {
 		os.Exit(1)
 	}
 
-	sqlDB := dbClient.GetSQL() // Returns *sql.DB if Postgres, but nil Mongo
+	sqlDB := db.MustSQLDB(dbClient)
 	_, entErr := ent.EntBootstrap(dbCfg.Provider, sqlDB, func(drv *entsql.Driver) any {
 		return generated.NewClient(generated.Driver(drv))
 	}, dbCfg.AutoMigrate)

@@ -7,17 +7,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/khiemnd777/noah_api/gateway/proxy"
-	"github.com/khiemnd777/noah_api/scripts/module_runner/runner"
-	"github.com/khiemnd777/noah_framework/shared/config"
-	"github.com/khiemnd777/noah_framework/shared/logger"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
+	"github.com/khiemnd777/noah_framework/runtime/gateway/proxy"
+	modulerunner "github.com/khiemnd777/noah_framework/runtime/module_runner"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/logger"
 )
 
 func Start(app frameworkapp.Application) error {
-	reg, reserved, err := frameworkruntime.GenerateRegistry("tmp/runtime.json", frameworkruntime.DefaultDiscoveryRoots(), config.Get().Server.Port)
+	reg, reserved, err := frameworkruntime.GenerateRegistry(frameworkruntime.APIPath("tmp", "runtime.json"), frameworkruntime.DefaultDiscoveryRoots(), config.Get().Server.Port)
 	if err != nil {
 		return fmt.Errorf("failed to load modules: %w", err)
 	}
@@ -35,9 +35,7 @@ func Start(app frameworkapp.Application) error {
 			defer wg.Done()
 
 			logger.Info(fmt.Sprintf("Launching module [%s]...", name))
-			// boot.TryStartModule(m.Name, m.Port)
-			// runner.StartModulesInBatch([]string{m.Name})
-			if err := runner.StartModule(name); err != nil {
+			if err := modulerunner.StartModule(name); err != nil {
 				logger.Warn(fmt.Sprintf("Module [%s] failed to start", name), err)
 				return
 			}
@@ -59,7 +57,7 @@ func Start(app frameworkapp.Application) error {
 
 	wg.Wait()
 
-	runner.SyncRunningModules()
+	modulerunner.SyncRunningModules()
 
 	srvCfg := config.Get().Server
 	addr := fmt.Sprintf("%s:%d", srvCfg.Host, srvCfg.Port)

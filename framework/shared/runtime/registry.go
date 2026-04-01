@@ -1,28 +1,30 @@
 package runtime
 
 import (
-	"github.com/khiemnd777/noah_framework/shared/config"
-	"github.com/khiemnd777/noah_framework/shared/utils"
 	frameworklifecycle "github.com/khiemnd777/noah_framework/pkg/lifecycle"
 	frameworkmodule "github.com/khiemnd777/noah_framework/pkg/module"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 )
 
 type RunningModule = frameworklifecycle.ModuleInfo
 type Registry = frameworklifecycle.Registry
 
-const registryPath = "tmp/runtime.json"
+func registryPath() string {
+	return frameworkruntime.APIPath("tmp", "runtime.json")
+}
 
 func LoadRegistry() (Registry, error) {
-	return frameworkruntime.LoadRegistry(registryPath)
+	return frameworkruntime.LoadRegistry(registryPath())
 }
 
 func SaveRegistry(reg Registry) error {
-	return frameworkruntime.SaveRegistry(registryPath, reg)
+	return frameworkruntime.SaveRegistry(registryPath(), reg)
 }
 
 func Register(name, route, host string, port int, external bool) error {
-	return frameworkruntime.RegisterModule(registryPath, name, route, host, port, external)
+	return frameworkruntime.RegisterModule(registryPath(), name, route, host, port, external)
 }
 
 func getDestPort(port int) int {
@@ -52,9 +54,9 @@ func ModuleEntrypointPath(moduleName string) (string, error) {
 }
 
 func GenerateRegistry(roots []frameworkmodule.DiscoveryRoot) (Registry, []*frameworkruntime.Reserved, error) {
-	return frameworkruntime.GenerateRegistry(registryPath, roots, getDestPort(0))
+	return frameworkruntime.GenerateRegistry(registryPath(), roots, getDestPort(0))
 }
 
 func UpdateRegistry(update func(Registry)) error {
-	return frameworkruntime.UpdateRegistry(registryPath, update)
+	return frameworkruntime.UpdateRegistry(registryPath(), update)
 }

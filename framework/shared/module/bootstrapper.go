@@ -6,6 +6,11 @@ import (
 	"os"
 	"time"
 
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
+	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	sharedapp "github.com/khiemnd777/noah_framework/shared/app"
 	"github.com/khiemnd777/noah_framework/shared/cache"
 	"github.com/khiemnd777/noah_framework/shared/circuitbreaker"
@@ -15,11 +20,6 @@ import (
 	"github.com/khiemnd777/noah_framework/shared/logger"
 	"github.com/khiemnd777/noah_framework/shared/runtime"
 	"github.com/khiemnd777/noah_framework/shared/utils"
-	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
-	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
-	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
-	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
-	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 type ModuleDeps[T any] struct {
@@ -78,7 +78,7 @@ func StartModule[T any](opts ModuleOptions[T]) {
 		return
 	}
 
-	// Should use `go run scripts/module_runner status` instead.
+	// Should use `go run ./cmd/module_runner status` instead.
 	// srvCfg := any(cfg).(interface{ GetServer() config.ServerConfig }).GetServer()
 	// monitor.InitModuleLifecycle(opts.ModuleName, srvCfg.Port)
 

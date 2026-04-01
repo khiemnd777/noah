@@ -78,7 +78,7 @@ func StartModule[T any](opts ModuleOptions[T]) {
 		return
 	}
 
-	// Should use `go run scripts/module_runner status` instead.
+	// Should use `go run ./cmd/module_runner status` instead.
 	// srvCfg := any(cfg).(interface{ GetServer() config.ServerConfig }).GetServer()
 	// monitor.InitModuleLifecycle(opts.ModuleName, srvCfg.Port)
 

@@ -10,18 +10,18 @@ import (
 	"github.com/khiemnd777/noah_framework/internal/legacy/shared/bootstrap"
 	"github.com/khiemnd777/noah_framework/internal/legacy/shared/config"
 	"github.com/khiemnd777/noah_framework/internal/legacy/shared/db"
-	"github.com/khiemnd777/noah_framework/internal/legacy/shared/utils"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func GenerateEntClient() error {
 	log.Println("⚙️  Generating Ent client...")
 
-	entPath := utils.GetFullPath("shared", "db", "ent")
+	entPath := frameworkruntime.FrameworkPath("shared", "db", "ent")
 
 	cmd := exec.Command("go", "generate", entPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Dir = utils.GetProjectRootDir()
+	cmd.Dir = frameworkruntime.FindRepoRoot()
 
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("❌ Failed to generate Ent client: %v", err)

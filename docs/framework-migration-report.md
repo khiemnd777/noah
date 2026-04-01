@@ -8,6 +8,28 @@ The latest migration batch removed those composition bridges for the low-complex
 This cleanup batch extracted the remaining legacy shared-layer runtime ownership from `api/shared/*` into `framework/runtime`: module registry/discovery, port/process helpers, circuit breaker, retry-aware HTTP wrappers, HTTP client, JWT/auth context helpers, pubsub, and generic runtime/path/config helpers now live in the framework, while `api/shared/*` keeps only compatibility shims or app-local behavior.
 This final built-in migration batch completed the module boundary move: every built-in module now lives under `framework/modules/*`, the corresponding `api/modules/*` built-in trees have been removed, and only `api/modules/main` remains application-owned. To preserve behavior while finishing the cutover, the remaining shared support used by those modules was internalized under `framework/internal/legacy/shared/*`, so framework modules no longer import `api/shared/*` directly.
 The final shared-layer cutover is now complete: the entire legacy shared surface moved from `api/shared/*` to `framework/shared/*`, all application imports and generator paths were repointed to framework ownership, and `api/shared` has been deleted.
+The final extraction phase completed the remaining platform move: gateway runtime, module-runner orchestration, reusable operational commands, SQL migrations, observability assets, and sample deployment files are now framework-owned. `api` now remains only as the sample/reference application entrypoint plus `api/modules/main`.
+
+## Final Extraction Addendum
+- Framework now owns the remaining system/platform surface:
+  - `framework/runtime/gateway/*`
+  - `framework/runtime/module_runner/*`
+  - `framework/cmd/*`
+  - `framework/scripts/*`
+  - `framework/migrations/sql/*`
+  - `framework/observability/*`
+  - `framework/devtools/sample_api/*`
+- API system ownership removed:
+  - `api/gateway/*`
+  - `api/starter/*`
+  - `api/scripts/*`
+  - `api/migrations/*`
+  - `api/observability/*`
+  - `api/docker/*`
+- Validation added for the final extraction:
+  - `cd framework && go test ./...`
+  - `cd api && go test ./...`
+  - `cd framework && go run ./cmd/module_runner sync`
 
 ## Structural Changes
 - Added root workspace wiring with `go.work`.

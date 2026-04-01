@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/khiemnd777/noah_framework/internal/legacy/shared/utils"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 var sqlMigrationPattern = regexp.MustCompile(`^V(\d+)__.+\.sql$`)
@@ -224,7 +224,7 @@ func loadAppliedSQLMigrations(ctx context.Context, db *sql.DB) (map[int]struct{}
 }
 
 func loadSQLMigrations() ([]sqlMigration, error) {
-	dir := utils.GetFullPath("migrations", "sql")
+	dir := frameworkruntime.FrameworkPath("migrations", "sql")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read migration dir failed: %w", err)

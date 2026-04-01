@@ -66,10 +66,10 @@ wait-redis-prod:
 	done
 
 migration: wait-postgres
-	$(COMPOSE) run --rm --no-deps --entrypoint /bin/bash $(API_SERVICE) -lc 'go run ./scripts/gen migrate'
+	$(COMPOSE) run --rm --no-deps --entrypoint /bin/bash $(API_SERVICE) -lc 'go run ../framework/cmd/gen migrate'
 
 migration-prod: wait-postgres-prod
-	$(COMPOSE) --env-file $(PROD_ENV_FILE) -f docker-compose.prod.yml run --rm --no-deps --entrypoint /bin/bash $(API_SERVICE) -lc 'go run ./scripts/gen migrate'
+	$(COMPOSE) --env-file $(PROD_ENV_FILE) -f docker-compose.prod.yml run --rm --no-deps --entrypoint /bin/bash $(API_SERVICE) -lc 'go run ../framework/cmd/gen migrate'
 
 redis-clean: wait-redis
 	$(COMPOSE) exec $(REDIS_SERVICE) redis-cli FLUSHALL

@@ -17,7 +17,7 @@ go run -mod=mod entgo.io/ent/cmd/ent generate ../framework/shared/db/ent/schema 
 
 # Step 1.1: Init database
 echo "👉 Initializing database"
-GOFLAGS=-mod=mod go run scripts/init_db/main.go
+GOFLAGS=-mod=mod go run ../framework/cmd/init_db
 
 # Step 2: Auto generate Ent for all modules with ent/schema
 for schema_dir in $(find modules -type d -path "*/ent/schema"); do
@@ -41,7 +41,7 @@ go mod vendor
 
 # Step 4: Init roles
 echo "👉 Initializing roles"
-GOFLAGS=-mod=mod go run scripts/init_roles/main.go
+GOFLAGS=-mod=mod go run ../framework/cmd/init_roles
 
 # Step 5: Build all
 echo "👉 Building all modules"

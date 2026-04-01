@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	"github.com/khiemnd777/noah_framework/shared/config"
 	"github.com/khiemnd777/noah_framework/shared/utils"
-	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 const moduleStartTimeout = 30 * time.Second
@@ -30,7 +29,7 @@ type RunningModules map[string]RunningModule
 
 func loadModuleConfig(module string) (host string, port int, err error) {
 	// 1️⃣  Ưu tiên runtime registry (dynamic port)
-	if reg, _ := frameworkruntime.LoadRegistry("tmp/runtime.json"); reg != nil {
+	if reg, _ := frameworkruntime.LoadRegistry(frameworkruntime.APIPath("tmp", "runtime.json")); reg != nil {
 		if m, ok := reg[module]; ok && m.Port != 0 {
 			return m.Host, m.Port, nil
 		}
@@ -158,7 +157,7 @@ func StopAllModules() error {
 }
 
 func SyncRunningModules() error {
-	registry, err := frameworkruntime.LoadRegistry("tmp/runtime.json")
+	registry, err := frameworkruntime.LoadRegistry(frameworkruntime.APIPath("tmp", "runtime.json"))
 	if err != nil {
 		return fmt.Errorf("cannot load registry: %w", err)
 	}
@@ -209,7 +208,7 @@ func SyncRunningModules() error {
 		return fmt.Errorf("failed to save modules.json: %w", err)
 	}
 
-	fmt.Printf("🔁 Synced %d modules to tmp/modules.json\n", len(running))
+	fmt.Printf("🔁 Synced %d modules to %s\n", len(running), frameworkruntime.APIPath("tmp", "modules.json"))
 	return nil
 }
 
@@ -285,7 +284,7 @@ func SaveRunningModule(module string, pid int, host string, port int) error {
 }
 
 func LoadRunningModules() (RunningModules, error) {
-	path := filepath.Join("tmp", "modules.json")
+	path := frameworkruntime.APIPath("tmp", "modules.json")
 	modules := RunningModules{}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -301,12 +300,12 @@ func LoadRunningModules() (RunningModules, error) {
 }
 
 func SaveRunningModules(modules RunningModules) error {
-	_ = os.MkdirAll("tmp", os.ModePerm)
+	_ = os.MkdirAll(frameworkruntime.APIPath("tmp"), os.ModePerm)
 	data, err := json.MarshalIndent(modules, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join("tmp", "modules.json"), data, 0644)
+	return os.WriteFile(frameworkruntime.APIPath("tmp", "modules.json"), data, 0644)
 }
 
 func waitForModuleReady(cmd *exec.Cmd, host string, port int, timeout time.Duration) error {

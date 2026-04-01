@@ -22,7 +22,7 @@ func main() {
 	switch os.Args[1] {
 	case "ent":
 		if len(os.Args) < 3 {
-			fmt.Println("❌ Missing schema name. Example: go run scripts/gen.go ent User")
+			fmt.Println("❌ Missing schema name. Example: go run ./cmd/gen ent User")
 			return
 		}
 		generateEntSchema(os.Args[2])
@@ -60,14 +60,14 @@ func main() {
 func printHelp() {
 	fmt.Println("\n📘 Dev CLI Helper Tool")
 	fmt.Println("Usage:")
-	fmt.Println("  go run ./scripts/gen ent <SchemaName>    📦 Create new schema and generate Ent client")
-	fmt.Println("  go run ./scripts/gen generate             ⚙️  Only re-generate Ent client")
-	fmt.Println("  go run ./scripts/gen seed                 🌱 Run seed logic")
-	fmt.Println("  go run ./scripts/gen migrate              🚀 Apply app-managed SQL migrations")
-	fmt.Println("  go run ./scripts/gen drop                 🧨 Drop public schema")
-	fmt.Println("  go run ./scripts/gen reset                🔁 Drop schema and re-run SQL migrations")
-	fmt.Println("  go run ./scripts/gen version              🧾 Show SQL migration status")
-	fmt.Println("  go run ./scripts/gen status               🧾 Alias of version")
+	fmt.Println("  go run ./cmd/gen ent <SchemaName>         📦 Create new schema and generate Ent client")
+	fmt.Println("  go run ./cmd/gen generate                  ⚙️  Only re-generate Ent client")
+	fmt.Println("  go run ./cmd/gen seed                      🌱 Run seed logic")
+	fmt.Println("  go run ./cmd/gen migrate                   🚀 Apply framework-managed SQL migrations")
+	fmt.Println("  go run ./cmd/gen drop                      🧨 Drop public schema")
+	fmt.Println("  go run ./cmd/gen reset                     🔁 Drop schema and re-run SQL migrations")
+	fmt.Println("  go run ./cmd/gen version                   🧾 Show SQL migration status")
+	fmt.Println("  go run ./cmd/gen status                    🧾 Alias of version")
 	fmt.Println()
 }
 

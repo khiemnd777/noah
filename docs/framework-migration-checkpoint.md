@@ -7,9 +7,9 @@
 - Phase 2: Completed
 - Phase 3: Completed
 - Phase 4: Completed
-- Phase 5: Partial
-- Phase 6: Partial
-- Phase 7: Partial
+- Phase 5: Completed
+- Phase 6: Completed
+- Phase 7: Completed
 
 ### Completed This Run
 - Removed the remaining built-in module directories from `api/modules/*` and left only `api/modules/main` as the application-owned feature area.
@@ -46,6 +46,9 @@
 - Migrated HTTP seam helpers in `api/shared/app` and `api/shared/middleware` to `framework/pkg/http` contracts while keeping Fiber-specific behavior behind compatibility bridges.
 - Converted module handler and registry signatures from `fiber.Router` / `*fiber.Ctx` to `framework/pkg/http.Router` / `framework/pkg/http.Context` without changing business logic.
 - Moved gateway reverse-proxy registration onto the framework router abstraction and kept websocket upgrade bridging inside adapter code only.
+- Completed the final system extraction by moving gateway runtime, module-runner orchestration, reusable commands, SQL migrations, observability assets, and sample deployment tooling from `api/*` into framework-owned paths.
+- Deleted the remaining API-owned system directories: `api/gateway`, `api/starter`, `api/scripts`, `api/migrations`, `api/observability`, and `api/docker`.
+- Reduced `api` to the sample entrypoint, sample config, and `api/modules/main/*`.
 
 ### Validation Snapshot
 - No frontend files changed.
@@ -73,6 +76,9 @@
 - Attribute is now discovered from `framework/modules/attribute` through the existing multi-root loader, with `api/modules/attribute/main.go` retained only as a composition/startup bridge.
 - Folder is now discovered from `framework/modules/folder`; `api/modules/folder` no longer exists.
 - Profile is now discovered from `framework/modules/profile`; `api/modules/profile` no longer exists.
+- `framework/`: `go test ./...` passed after the final gateway/tooling/migration asset extraction.
+- `api/`: `go test ./...` passed after deleting API-owned system packages.
+- `framework/`: `go run ./cmd/module_runner sync` completed successfully and wrote synchronized runtime state into `api/tmp/modules.json` from framework-owned discovery/orchestration code.
 
 ### Final Shared Layer Cutover
 - Migrated the entire `api/shared/**` tree into exported framework ownership at `framework/shared/**`.
@@ -81,4 +87,4 @@
 - Preserved `framework/pkg/*` as contract-only packages; Fiber, SQL, Redis, websocket, and Ent concrete types remain outside the public contract surface.
 
 ### Remaining Work
-- Final built-in module migration is complete. Remaining cleanup is stabilization-oriented: continue reducing duplication between `framework/shared/*` and `framework/internal/legacy/shared/*`, then complete final runtime ownership cleanup without reintroducing `api/modules/*` or `api/shared/*` ownership.
+- System extraction is complete. Remaining work is cleanup-only: reduce duplication between `framework/shared/*` and `framework/internal/legacy/shared/*`, and generalize the remaining sample-app filesystem assumptions inside framework runtime helpers.

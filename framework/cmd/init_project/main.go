@@ -17,7 +17,7 @@ func main() {
 	run("Generating Ent for shared", "go", "run", "-mod=mod", "entgo.io/ent/cmd/ent", "generate", "../framework/shared/db/ent/schema", "--target", "../framework/shared/db/ent/generated", "--feature", "sql/execquery")
 
 	// Step 1.1: Init database
-	run("Initializing database", "go", "run", "./scripts/init_db")
+	run("Initializing database", "go", "run", "./cmd/init_db")
 
 	// Step 2: Auto generate Ent for all modules
 	err := filepath.Walk("modules", func(path string, info os.FileInfo, err error) error {
@@ -50,7 +50,7 @@ func main() {
 	run("Running go mod vendor", "go", "mod", "vendor")
 
 	// // Step 4: Init roles
-	// run("Initializing roles", "go", "run", "./scripts/init_roles")
+	// run("Initializing roles", "go", "run", "./cmd/init_roles")
 
 	// Step 5: Build all
 	run("Building all modules", "go", "build", "./...")

@@ -6,7 +6,10 @@ import (
 	"os"
 
 	entsql "entgo.io/ent/dialect/sql"
-	gateway "github.com/khiemnd777/noah_api/gateway/runtime"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
+	gateway "github.com/khiemnd777/noah_framework/runtime/gateway"
 	"github.com/khiemnd777/noah_framework/shared/bootstrap"
 	"github.com/khiemnd777/noah_framework/shared/cache"
 	"github.com/khiemnd777/noah_framework/shared/circuitbreaker"
@@ -19,10 +22,6 @@ import (
 	"github.com/khiemnd777/noah_framework/shared/logger"
 	"github.com/khiemnd777/noah_framework/shared/utils"
 	"github.com/khiemnd777/noah_framework/shared/worker"
-	_ "github.com/khiemnd777/noah_api/starter"
-	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
-	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
-	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func main() {

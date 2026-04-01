@@ -4,8 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	moduleModel "github.com/khiemnd777/noah_api/modules/observability/model"
-	sharedconfig "github.com/khiemnd777/noah_api/shared/config"
+	moduleModel "github.com/khiemnd777/noah_framework/modules/observability/model"
 )
 
 func TestParseLogEntry(t *testing.T) {
@@ -27,7 +26,7 @@ func TestParseLogEntry(t *testing.T) {
 	}
 }
 
-func TestParseLogEntry_FallbackFromStreamLabels(t *testing.T) {
+func TestParseLogEntryFallbackFromStreamLabels(t *testing.T) {
 	raw := `{"ts":"2026-03-17T10:00:00Z","level":"warn","message":"fallback"}`
 	stream := map[string]string{
 		"service":       "noah_api",
@@ -60,14 +59,12 @@ func TestParseLogEntry_FallbackFromStreamLabels(t *testing.T) {
 	}
 }
 
-func TestBuildStreamQuery_IncludesJSONErrorFilterAndOptionalFilters(t *testing.T) {
+func TestBuildStreamQueryIncludesJSONErrorFilterAndOptionalFilters(t *testing.T) {
 	userID := 42
 	deptID := 7
 	repo := &observabilityRepository{
-		cfg: sharedconfig.ObservabilityConfig{
-			Loki: sharedconfig.ObservabilityLokiConfig{
-				StreamSelector: `{app="noah_api"}`,
-			},
+		cfg: LokiConfig{
+			StreamSelector: `{app="noah_api"}`,
 		},
 	}
 
@@ -92,12 +89,10 @@ func TestBuildStreamQuery_IncludesJSONErrorFilterAndOptionalFilters(t *testing.T
 	}
 }
 
-func TestNormalizeLimit_UsesConfigMaxQueryLimit(t *testing.T) {
+func TestNormalizeLimitUsesConfigMaxQueryLimit(t *testing.T) {
 	repo := &observabilityRepository{
-		cfg: sharedconfig.ObservabilityConfig{
-			Loki: sharedconfig.ObservabilityLokiConfig{
-				MaxQueryLimit: 100,
-			},
+		cfg: LokiConfig{
+			MaxQueryLimit: 100,
 		},
 	}
 

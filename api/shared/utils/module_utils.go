@@ -2,21 +2,27 @@ package utils
 
 import (
 	"os"
+	"path/filepath"
+
+	frameworkmodule "github.com/khiemnd777/noah_framework/pkg/module"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func DiscoverAllModules() ([]string, error) {
-	dirs, err := os.ReadDir(GetFullPath("modules"))
+	apiRoot := GetProjectRootDir()
+	repoRoot := filepath.Clean(filepath.Join(apiRoot, ".."))
+
+	descriptors, err := frameworkruntime.DiscoverModules([]frameworkmodule.DiscoveryRoot{
+		{Name: "framework", Path: filepath.Join(repoRoot, "framework", "modules")},
+		{Name: "api-main", Path: filepath.Join(apiRoot, "modules", "main")},
+		{Name: "api", Path: filepath.Join(apiRoot, "modules")},
+	})
 	if err != nil {
 		return nil, err
 	}
-	var modules []string
-	for _, d := range dirs {
-		if d.IsDir() {
-			configPath := GetModuleConfigPath(d.Name())
-			if _, err := os.Stat(configPath); err == nil {
-				modules = append(modules, d.Name())
-			}
-		}
+	modules := make([]string, 0, len(descriptors))
+	for _, descriptor := range descriptors {
+		modules = append(modules, descriptor.ID)
 	}
 	return modules, nil
 }

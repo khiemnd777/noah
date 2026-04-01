@@ -1,7 +1,5 @@
 package db
 
-import "database/sql"
-
 type Config struct {
 	Provider    string
 	AutoMigrate bool
@@ -23,14 +21,8 @@ type MongoConfig struct {
 	Database string
 }
 
-type SQLDB = sql.DB
-
 type Client interface {
 	Connect() error
 	Close() error
 	Provider() string
-}
-
-type SQLBridge interface {
-	SQLDB() any
 }

@@ -1,63 +1,50 @@
 package redis
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
-
-	"github.com/redis/go-redis/v9"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 var (
-	clients  = make(map[string]*redis.Client)
-	ctx      = context.Background()
 	initOnce sync.Once
 )
 
 func Init() {
 	initOnce.Do(func() {
-		for name, conf := range config.Get().Redis.Instances {
-			addr := conf.Host + ":" + strconv.Itoa(conf.Port)
-			opts := &redis.Options{
-				Addr:     addr,
-				Password: conf.Password,
-				DB:       conf.DB,
-			}
-			client := redis.NewClient(opts)
-			if err := client.Ping(context.Background()).Err(); err != nil {
-				log.Printf("⚠️ Redis [%s] not connected: %v", name, err)
-			} else {
-				clients[name] = client
-				log.Printf("✅ Redis [%s] connected: %s", name, addr)
-			}
+		if err := frameworkruntime.ConfigureCache(toFrameworkCacheConfig(config.Get().Redis)); err != nil {
+			logger.Warn(fmt.Sprintf("⚠️ Redis infra not connected: %v", err))
 		}
 	})
 }
 
-// Get returns redis client by instance name (e.g. "cache", "session")
-func GetInstance(name string) *redis.Client {
+func backend(name string) (frameworkcache.Backend, error) {
 	Init()
-	return clients[name]
+	return frameworkruntime.CacheBackend(name)
 }
 
 func Get(name, key string) (string, error) {
-	Init()
-	rdb := GetInstance(name)
-	val, err := rdb.Get(ctx, key).Result()
-	if err == redis.Nil {
-		logger.Info("🔍 Redis GET: key not found: " + key)
-		return "", nil
-	} else if err != nil {
+	rdb, err := backend(name)
+	if err != nil {
+		return "", err
+	}
+
+	val, err := rdb.Get(key)
+	if err != nil {
 		logger.Warn("❌ Redis GET error: "+key, err)
 		return "", err
 	}
-	return val, nil
+	if len(val) == 0 {
+		logger.Info("🔍 Redis GET: key not found: " + key)
+		return "", nil
+	}
+	return string(val), nil
 }
 
 func GetInt(name, key string) (int, error) {
@@ -69,9 +56,11 @@ func GetInt(name, key string) (int, error) {
 }
 
 func Set(name, key string, value interface{}, ttl time.Duration) error {
-	Init()
-	rdb := GetInstance(name)
-	err := rdb.Set(ctx, key, value, ttl).Err()
+	rdb, err := backend(name)
+	if err != nil {
+		return err
+	}
+	err = rdb.Set(key, []byte(fmt.Sprint(value)), ttl)
 	if err != nil {
 		logger.Warn("❌ Redis SET error: "+key, err)
 	}
@@ -79,10 +68,11 @@ func Set(name, key string, value interface{}, ttl time.Duration) error {
 }
 
 func Incr(name, key string) (int64, error) {
-	Init()
-	rdb := GetInstance(name)
-	incr := rdb.Incr(ctx, key)
-	val, err := incr.Result()
+	rdb, err := backend(name)
+	if err != nil {
+		return 0, err
+	}
+	val, err := rdb.Increment(key)
 	if err != nil {
 		logger.Warn("❌ Redis SET error: "+key, err)
 	}
@@ -90,9 +80,11 @@ func Incr(name, key string) (int64, error) {
 }
 
 func Del(name, key string) error {
-	Init()
-	rdb := GetInstance(name)
-	err := rdb.Del(ctx, key).Err()
+	rdb, err := backend(name)
+	if err != nil {
+		return err
+	}
+	err = rdb.Delete(key)
 	if err != nil {
 		logger.Warn("❌ Redis DEL error: "+key, err)
 	}
@@ -100,68 +92,40 @@ func Del(name, key string) error {
 }
 
 func DelByPattern(name string, pattern string) error {
-	Init()
-	rdb := GetInstance(name)
-
-	var cursor uint64
-	ctx := context.Background()
-
-	for {
-		keys, nextCursor, err := rdb.Scan(ctx, cursor, pattern, 100).Result()
-		if err != nil {
-			return fmt.Errorf("error scanning keys with pattern %s: %w", pattern, err)
-		}
-
-		if len(keys) > 0 {
-			if _, err := rdb.Del(ctx, keys...).Result(); err != nil {
-				return fmt.Errorf("error deleting keys: %w", err)
-			}
-		}
-
-		cursor = nextCursor
-		if cursor == 0 {
-			break
-		}
+	rdb, err := backend(name)
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return rdb.DeleteByPattern(pattern)
 }
 
 func Exists(name, key string) (bool, error) {
-	Init()
-	rdb := GetInstance(name)
-	count, err := rdb.Exists(ctx, key).Result()
+	rdb, err := backend(name)
+	if err != nil {
+		return false, err
+	}
+	ok, err := rdb.Exists(key)
 	if err != nil {
 		logger.Warn("❌ Redis EXISTS error: "+key, err)
 		return false, err
 	}
-	return count > 0, nil
+	return ok, nil
 }
 
 func ScanKeys(name, pattern string) ([]string, error) {
-	Init()
-	rdb := GetInstance(name)
-	var cursor uint64
-	var keys []string
-	var err error
-	for {
-		var k []string
-		k, cursor, err = rdb.Scan(ctx, cursor, pattern, 100).Result()
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, k...)
-		if cursor == 0 {
-			break
-		}
+	rdb, err := backend(name)
+	if err != nil {
+		return nil, err
 	}
-	return keys, nil
+	return rdb.Scan(pattern)
 }
 
 func TTL(name, key string) (time.Duration, error) {
-	Init()
-	rdb := GetInstance(name)
-	ttl, err := rdb.TTL(ctx, key).Result()
+	rdb, err := backend(name)
+	if err != nil {
+		return 0, err
+	}
+	ttl, err := rdb.TTL(key)
 	if err != nil {
 		logger.Warn("❌ Redis TTL error: "+key, err)
 		return 0, err
@@ -170,23 +134,39 @@ func TTL(name, key string) (time.Duration, error) {
 }
 
 func InitFromConfig(cfg config.RedisConfig) {
-	mu := sync.Mutex{}
-	mu.Lock()
-	defer mu.Unlock()
-
+	if err := frameworkruntime.ConfigureCache(toFrameworkCacheConfig(cfg)); err != nil {
+		logger.Warn(fmt.Sprintf("⚠️ Redis infra not connected: %v", err))
+		return
+	}
 	for name, rc := range cfg.Instances {
-		addr := fmt.Sprintf("%s:%d", rc.Host, rc.Port)
-		client := redis.NewClient(&redis.Options{
-			Addr:     addr,
-			Password: rc.Password,
-			DB:       rc.DB,
-		})
+		logger.Info(fmt.Sprintf("✅ Redis [%s] configured: %s:%d", name, rc.Host, rc.Port))
+	}
+}
 
-		if err := client.Ping(context.Background()).Err(); err != nil {
-			logger.Warn(fmt.Sprintf("⚠️ Redis [%s] not connected: %v", name, err))
-		} else {
-			clients[name] = client
-			logger.Info(fmt.Sprintf("✅ Redis [%s] connected: %s", name, addr))
+func toFrameworkCacheConfig(cfg config.RedisConfig) frameworkcache.Config {
+	instances := make(map[string]frameworkcache.InstanceConfig, len(cfg.Instances))
+	for name, instance := range cfg.Instances {
+		instances[name] = frameworkcache.InstanceConfig{
+			Host:      instance.Host,
+			Port:      instance.Port,
+			Username:  instance.Username,
+			Password:  instance.Password,
+			DB:        instance.DB,
+			IsCluster: instance.IsCluster,
+			UseTLS:    instance.UseTLS,
 		}
+	}
+
+	defaultInstance := "cache"
+	if _, ok := instances["cache"]; !ok {
+		for name := range instances {
+			defaultInstance = name
+			break
+		}
+	}
+
+	return frameworkcache.Config{
+		DefaultInstance: defaultInstance,
+		Instances:       instances,
 	}
 }

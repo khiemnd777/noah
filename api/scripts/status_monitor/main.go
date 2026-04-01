@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -99,18 +98,9 @@ func main() {
 }
 
 func getStatusFromRedis(module string) ModuleStatus {
-	rdb := redis.GetInstance(redisInstance)
-	if rdb == nil {
-		return ModuleStatus{
-			Status:  "ERROR",
-			Message: "redis instance not found",
-		}
-	}
-
-	ctx := context.Background()
 	key := statusPrefix + module
 
-	raw, err := rdb.Get(ctx, key).Result()
+	raw, err := redis.Get(redisInstance, key)
 	if err != nil {
 		return ModuleStatus{
 			Status:  "MISSING",

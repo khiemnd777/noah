@@ -37,7 +37,10 @@ func loadModuleConfig(module string) (host string, port int, err error) {
 	}
 
 	// 2️⃣  Fallback: đọc config.yaml (cổng tĩnh)
-	path := utils.GetModuleConfigPath(module)
+	path, err := runtime.ModuleConfigPath(module)
+	if err != nil {
+		return "", 0, err
+	}
 	cfg, err := utils.LoadConfig[struct {
 		Server struct {
 			Host string `yaml:"host"`
@@ -73,7 +76,11 @@ func StartModule(module string) error {
 	}
 
 	fmt.Printf("🚀 Starting module '%s' on %s:%d...\n", module, host, port)
-	cmd := exec.Command("go", "run", utils.GetFullPath("modules", module, "main.go"))
+	entryPath, err := runtime.ModuleEntrypointPath(module)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("go", "run", entryPath)
 	cmd.Env = append(os.Environ(), "GATEWAY_MODE=true")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -157,16 +164,13 @@ func SyncRunningModules() error {
 	}
 
 	running := RunningModules{}
-	entries, err := os.ReadDir("modules")
+	descriptors, err := runtime.DiscoverModuleDescriptors()
 	if err != nil {
-		return fmt.Errorf("failed to read modules directory: %w", err)
+		return fmt.Errorf("failed to discover modules: %w", err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
+	for _, descriptor := range descriptors {
+		name := descriptor.ID
 		var (
 			host string
 			port int
@@ -211,9 +215,9 @@ func SyncRunningModules() error {
 
 func ShowStatus() error {
 	running, _ := LoadRunningModules()
-	entries, err := os.ReadDir("modules")
+	descriptors, err := runtime.DiscoverModuleDescriptors()
 	if err != nil {
-		return fmt.Errorf("failed to read modules directory: %w", err)
+		return fmt.Errorf("failed to discover modules: %w", err)
 	}
 
 	type moduleRow struct {
@@ -227,11 +231,8 @@ func ShowStatus() error {
 	}
 	var rows []moduleRow
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
+	for _, descriptor := range descriptors {
+		name := descriptor.ID
 		host, port, err := loadModuleConfig(name)
 		if err != nil {
 			rows = append(rows, moduleRow{

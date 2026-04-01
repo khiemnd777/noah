@@ -1,7 +1,9 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -59,6 +61,49 @@ func DefaultDiscoveryRoots() []frameworkmodule.DiscoveryRoot {
 		{Name: "api-main", Path: filepath.Join(apiRoot, "modules", "main")},
 		{Name: "api", Path: filepath.Join(apiRoot, "modules")},
 	}
+}
+
+func DiscoverModuleDescriptors() ([]frameworkmodule.Descriptor, error) {
+	return frameworkruntime.DiscoverModules(DefaultDiscoveryRoots())
+}
+
+func ResolveModuleDescriptor(moduleName string) (frameworkmodule.Descriptor, error) {
+	descriptors, err := DiscoverModuleDescriptors()
+	if err != nil {
+		return frameworkmodule.Descriptor{}, err
+	}
+
+	for _, descriptor := range descriptors {
+		if descriptor.ID == moduleName || descriptor.Name == moduleName {
+			return descriptor, nil
+		}
+	}
+
+	return frameworkmodule.Descriptor{}, fmt.Errorf("module %q not found in discovery roots", moduleName)
+}
+
+func ModuleConfigPath(moduleName string) (string, error) {
+	descriptor, err := ResolveModuleDescriptor(moduleName)
+	if err != nil {
+		return "", err
+	}
+	return descriptor.ConfigPath, nil
+}
+
+func ModuleEntrypointPath(moduleName string) (string, error) {
+	apiRoot := utils.GetProjectRootDir()
+	apiEntryPath := filepath.Join(apiRoot, "modules", moduleName, "main.go")
+	if _, err := os.Stat(apiEntryPath); err == nil {
+		return apiEntryPath, nil
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	descriptor, err := ResolveModuleDescriptor(moduleName)
+	if err != nil {
+		return "", err
+	}
+	return descriptor.EntryPath, nil
 }
 
 func GenerateRegistry(roots []frameworkmodule.DiscoveryRoot) (Registry, []*app.Reserved, error) {

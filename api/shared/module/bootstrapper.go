@@ -1,6 +1,7 @@
 package module
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"time"
@@ -22,7 +23,7 @@ import (
 
 type ModuleDeps[T any] struct {
 	Config    *T
-	DB        *frameworkdb.SQLDB
+	DB        *sql.DB
 	Ent       any
 	SharedEnt any
 	App       frameworkapp.Application
@@ -188,7 +189,7 @@ func StartFiber(appRuntime frameworkapp.Application, moduleName string) {
 	}
 }
 
-func fiberSafeSQLDB(client frameworkdb.Client) *frameworkdb.SQLDB {
+func fiberSafeSQLDB(client frameworkdb.Client) *sql.DB {
 	sqlDB, err := db.SQLDB(client)
 	if err != nil {
 		return nil

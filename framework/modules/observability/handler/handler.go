@@ -1,73 +1,77 @@
 package handler
 
 import (
+	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/khiemnd777/noah_api/modules/observability/config"
-	"github.com/khiemnd777/noah_api/modules/observability/model"
-	"github.com/khiemnd777/noah_api/modules/observability/service"
-	"github.com/khiemnd777/noah_api/shared/app"
-	"github.com/khiemnd777/noah_api/shared/app/client_error"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
-	"github.com/khiemnd777/noah_api/shared/module"
+	"github.com/khiemnd777/noah_framework/modules/observability/model"
+	"github.com/khiemnd777/noah_framework/modules/observability/service"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
-type ObservabilityHandler struct {
-	svc  service.ObservabilityService
-	deps *module.ModuleDeps[config.ModuleConfig]
+type PermissionGuard func(c frameworkhttp.Context, permission string) error
+
+type Handler struct {
+	svc               service.Service
+	requirePermission PermissionGuard
 }
 
-func NewObservabilityHandler(svc service.ObservabilityService, deps *module.ModuleDeps[config.ModuleConfig]) *ObservabilityHandler {
-	return &ObservabilityHandler{svc: svc, deps: deps}
+func New(svc service.Service, requirePermission PermissionGuard) *Handler {
+	return &Handler{svc: svc, requirePermission: requirePermission}
 }
 
-func (h *ObservabilityHandler) RegisterRoutes(router frameworkhttp.Router) {
-	app.RouterGet(router, "/logs", h.ListLogs)
-	app.RouterGet(router, "/logs/summary", h.GetSummary)
+func (h *Handler) RegisterRoutes(router frameworkhttp.Router) {
+	router.Get("/logs", h.ListLogs)
+	router.Get("/logs/summary", h.GetSummary)
 }
 
-func (h *ObservabilityHandler) ListLogs(c frameworkhttp.Context) error {
-	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "system_log.read"); err != nil {
+func (h *Handler) ListLogs(c frameworkhttp.Context) error {
+	if err := h.guardPermission(c, "system_log.read"); err != nil {
 		return err
 	}
 
 	query, err := parseListLogsQuery(c)
 	if err != nil {
-		return client_error.ResponseError(c, fiber.StatusBadRequest, err, err.Error())
+		return respondError(c, http.StatusBadRequest, err, err.Error())
 	}
 
 	items, err := h.svc.ListLogs(c.UserContext(), query)
 	if err != nil {
-		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, "Failed to fetch system logs")
+		return respondError(c, http.StatusInternalServerError, err, "Failed to fetch system logs")
 	}
 
-	return c.JSON(fiber.Map{
+	return c.JSON(map[string]any{
 		"items": items,
 		"total": len(items),
 	})
 }
 
-func (h *ObservabilityHandler) GetSummary(c frameworkhttp.Context) error {
-	if err := rbac.GuardAnyPermission(c, h.deps.Ent.(*generated.Client), "system_log.read"); err != nil {
+func (h *Handler) GetSummary(c frameworkhttp.Context) error {
+	if err := h.guardPermission(c, "system_log.read"); err != nil {
 		return err
 	}
 
 	query, err := parseListLogsQuery(c)
 	if err != nil {
-		return client_error.ResponseError(c, fiber.StatusBadRequest, err, err.Error())
+		return respondError(c, http.StatusBadRequest, err, err.Error())
 	}
 
 	summary, err := h.svc.GetSummary(c.UserContext(), query)
 	if err != nil {
-		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, "Failed to fetch system log summary")
+		return respondError(c, http.StatusInternalServerError, err, "Failed to fetch system log summary")
 	}
 
 	return c.JSON(summary)
+}
+
+func (h *Handler) guardPermission(c frameworkhttp.Context, permission string) error {
+	if h.requirePermission == nil {
+		return nil
+	}
+	return h.requirePermission(c, permission)
 }
 
 func parseListLogsQuery(c frameworkhttp.Context) (model.ListLogsQuery, error) {
@@ -124,7 +128,7 @@ func parseTimeQuery(raw string) (time.Time, error) {
 		return unixSeconds, nil
 	}
 
-	return time.Time{}, fiber.NewError(fiber.StatusBadRequest, "invalid time format, expected RFC3339")
+	return time.Time{}, errors.New("invalid time format, expected RFC3339")
 }
 
 func splitCSV(raw string) []string {
@@ -151,7 +155,25 @@ func parseOptionalIntQuery(c frameworkhttp.Context, key string) (*int, error) {
 
 	value, err := strconv.Atoi(raw)
 	if err != nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "invalid "+key)
+		return nil, errors.New("invalid " + key)
 	}
 	return &value, nil
+}
+
+func respondError(c frameworkhttp.Context, statusCode int, err error, extraMessage string) error {
+	message := "Server error"
+	if statusCode >= http.StatusBadRequest && statusCode < http.StatusInternalServerError {
+		message = "Client error"
+	}
+	if extraMessage != "" {
+		message += ": " + extraMessage
+	}
+	if err != nil && extraMessage == "" {
+		message += ": " + err.Error()
+	}
+
+	return c.Status(statusCode).JSON(map[string]any{
+		"statusCode":    statusCode,
+		"statusMessage": message,
+	})
 }

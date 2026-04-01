@@ -12,23 +12,30 @@ import (
 	"strings"
 	"time"
 
-	moduleModel "github.com/khiemnd777/noah_api/modules/observability/model"
-	sharedconfig "github.com/khiemnd777/noah_api/shared/config"
+	moduleModel "github.com/khiemnd777/noah_framework/modules/observability/model"
 )
 
-type ObservabilityRepository interface {
+type LokiConfig struct {
+	BaseURL        string
+	TenantID       string
+	BearerToken    string
+	Timeout        time.Duration
+	StreamSelector string
+	MaxQueryLimit  int
+}
+
+type Repository interface {
 	ListLogs(ctx context.Context, query moduleModel.ListLogsQuery) ([]moduleModel.LogEntry, error)
 	GetSummary(ctx context.Context, query moduleModel.ListLogsQuery) (moduleModel.Summary, error)
 }
 
 type observabilityRepository struct {
 	client *http.Client
-	cfg    sharedconfig.ObservabilityConfig
+	cfg    LokiConfig
 }
 
-func NewObservabilityRepository() ObservabilityRepository {
-	cfg := sharedconfig.Get().Observability
-	timeout := cfg.Loki.Timeout
+func New(cfg LokiConfig) Repository {
+	timeout := cfg.Timeout
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
@@ -132,7 +139,7 @@ func (r *observabilityRepository) queryCount(ctx context.Context, query moduleMo
 }
 
 func (r *observabilityRepository) buildStreamQuery(query moduleModel.ListLogsQuery) string {
-	selector := strings.TrimSpace(r.cfg.Loki.StreamSelector)
+	selector := strings.TrimSpace(r.cfg.StreamSelector)
 	if selector == "" {
 		selector = `{app="noah_api"}`
 	}
@@ -179,7 +186,7 @@ func (r *observabilityRepository) buildStreamQuery(query moduleModel.ListLogsQue
 }
 
 func (r *observabilityRepository) doRequest(ctx context.Context, path string, params url.Values, out any) error {
-	baseURL := strings.TrimRight(r.cfg.Loki.BaseURL, "/")
+	baseURL := strings.TrimRight(r.cfg.BaseURL, "/")
 	if baseURL == "" {
 		return fmt.Errorf("observability loki base_url is required")
 	}
@@ -189,11 +196,11 @@ func (r *observabilityRepository) doRequest(ctx context.Context, path string, pa
 		return err
 	}
 
-	if r.cfg.Loki.TenantID != "" {
-		req.Header.Set("X-Scope-OrgID", r.cfg.Loki.TenantID)
+	if r.cfg.TenantID != "" {
+		req.Header.Set("X-Scope-OrgID", r.cfg.TenantID)
 	}
-	if r.cfg.Loki.BearerToken != "" {
-		req.Header.Set("Authorization", "Bearer "+r.cfg.Loki.BearerToken)
+	if r.cfg.BearerToken != "" {
+		req.Header.Set("Authorization", "Bearer "+r.cfg.BearerToken)
 	}
 
 	resp, err := r.client.Do(req)
@@ -218,73 +225,122 @@ func parseLogEntry(rawTS, rawLine string, stream map[string]string) moduleModel.
 		Raw: rawLine,
 	}
 
-	if parsedTS, err := strconv.ParseInt(rawTS, 10, 64); err == nil {
-		entry.Timestamp = time.Unix(0, parsedTS).UTC()
+	if ts, err := strconv.ParseInt(rawTS, 10, 64); err == nil && ts > 0 {
+		entry.Timestamp = time.Unix(0, ts).UTC()
 	}
 
 	var payload map[string]any
-	if err := json.Unmarshal([]byte(rawLine), &payload); err != nil {
-		entry.Message = rawLine
-		entry.Level = "unknown"
-		return entry
+	if err := json.Unmarshal([]byte(rawLine), &payload); err == nil {
+		entry.Level = normalizeStringField(payload, "level")
+		entry.Message = normalizeStringField(payload, "message")
+		entry.Service = normalizeStringField(payload, "service")
+		entry.Module = normalizeStringField(payload, "module")
+		entry.Environment = normalizeStringField(payload, "env")
+		entry.RequestID = normalizeStringField(payload, "request_id")
+		entry.Method = normalizeStringField(payload, "method")
+		entry.Path = normalizeStringField(payload, "path")
+		entry.Source = normalizeStringField(payload, "source")
+		entry.Error = normalizeStringField(payload, "error")
+		entry.Stacktrace = normalizeStringField(payload, "stacktrace")
+
+		if tsValue := normalizeStringField(payload, "ts"); tsValue != "" {
+			if parsed, err := time.Parse(time.RFC3339Nano, tsValue); err == nil {
+				entry.Timestamp = parsed.UTC()
+			}
+		}
+
+		entry.UserID = normalizeIntField(payload, "user_id")
+		entry.DepartmentID = normalizeIntField(payload, "department_id")
+
+		delete(payload, "ts")
+		delete(payload, "level")
+		delete(payload, "message")
+		delete(payload, "service")
+		delete(payload, "module")
+		delete(payload, "env")
+		delete(payload, "request_id")
+		delete(payload, "user_id")
+		delete(payload, "department_id")
+		delete(payload, "method")
+		delete(payload, "path")
+		delete(payload, "source")
+		delete(payload, "error")
+		delete(payload, "stacktrace")
+		if len(payload) > 0 {
+			entry.Fields = payload
+		}
 	}
 
-	entry.Timestamp = parseTime(payload["ts"], entry.Timestamp)
-	entry.Level = firstNonEmpty(toString(payload["level"]), toString(payload["severity"]))
-	entry.Message = firstNonEmpty(toString(payload["message"]), toString(payload["msg"]))
-	entry.Service = firstNonEmpty(toString(payload["service"]), stream["service"])
-	entry.Module = firstNonEmpty(toString(payload["module"]), stream["module"])
-	entry.Environment = firstNonEmpty(toString(payload["env"]), toString(payload["environment"]), stream["env"])
-	entry.RequestID = firstNonEmpty(toString(payload["request_id"]), stream["request_id"])
-	entry.UserID = firstNonZero(toInt(payload["user_id"]), toInt(stream["user_id"]))
-	entry.DepartmentID = firstNonZero(toInt(payload["department_id"]), toInt(stream["department_id"]))
-	entry.Method = firstNonEmpty(toString(payload["method"]), stream["method"])
-	entry.Path = firstNonEmpty(toString(payload["path"]), stream["path"])
-	entry.Source = firstNonEmpty(toString(payload["source"]), stream["source"])
-	entry.Error = firstNonEmpty(toString(payload["error"]), stream["error"])
-	entry.Stacktrace = firstNonEmpty(toString(payload["stacktrace"]), stream["stacktrace"])
-	entry.Fields = extractExtraFields(payload)
+	if entry.Service == "" {
+		entry.Service = stream["service"]
+	}
+	if entry.Module == "" {
+		entry.Module = stream["module"]
+	}
+	if entry.Environment == "" {
+		entry.Environment = stream["env"]
+	}
+	if entry.RequestID == "" {
+		entry.RequestID = stream["request_id"]
+	}
+	if entry.UserID == 0 {
+		entry.UserID = parseStringInt(stream["user_id"])
+	}
+	if entry.DepartmentID == 0 {
+		entry.DepartmentID = parseStringInt(stream["department_id"])
+	}
 
 	return entry
 }
 
-func extractExtraFields(payload map[string]any) map[string]any {
-	known := map[string]struct{}{
-		"ts":            {},
-		"level":         {},
-		"severity":      {},
-		"message":       {},
-		"msg":           {},
-		"service":       {},
-		"module":        {},
-		"env":           {},
-		"environment":   {},
-		"request_id":    {},
-		"user_id":       {},
-		"department_id": {},
-		"method":        {},
-		"path":          {},
-		"source":        {},
-		"error":         {},
-		"stacktrace":    {},
+func normalizeStringField(payload map[string]any, key string) string {
+	value, ok := payload[key]
+	if !ok {
+		return ""
 	}
-
-	extra := make(map[string]any)
-	for k, v := range payload {
-		if _, ok := known[k]; ok {
-			continue
-		}
-		extra[k] = v
+	switch typed := value.(type) {
+	case string:
+		return typed
+	default:
+		return fmt.Sprint(typed)
 	}
-	if len(extra) == 0 {
-		return nil
-	}
-	return extra
 }
 
-func withLevels(query moduleModel.ListLogsQuery, levels ...string) moduleModel.ListLogsQuery {
-	query.Levels = levels
-	return query
+func normalizeIntField(payload map[string]any, key string) int {
+	value, ok := payload[key]
+	if !ok {
+		return 0
+	}
+	switch typed := value.(type) {
+	case int:
+		return typed
+	case int64:
+		return int(typed)
+	case float64:
+		return int(typed)
+	case string:
+		return parseStringInt(typed)
+	default:
+		return 0
+	}
+}
+
+func parseStringInt(raw string) int {
+	value, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+func (r *observabilityRepository) normalizeLimit(limit int) int {
+	if limit <= 0 {
+		limit = 50
+	}
+	if r.cfg.MaxQueryLimit > 0 && limit > r.cfg.MaxQueryLimit {
+		return r.cfg.MaxQueryLimit
+	}
+	return limit
 }
 
 func normalizeDirection(direction string) string {
@@ -296,105 +352,24 @@ func normalizeDirection(direction string) string {
 	}
 }
 
+func withLevels(query moduleModel.ListLogsQuery, level string) moduleModel.ListLogsQuery {
+	query.Levels = []string{level}
+	return query
+}
+
 func formatRange(window time.Duration) string {
-	seconds := int(window.Seconds())
-	if seconds <= 0 {
-		seconds = 1
+	if window%time.Hour == 0 {
+		return fmt.Sprintf("%dh", int(window/time.Hour))
 	}
-	return fmt.Sprintf("%ds", seconds)
-}
-
-func parseTime(value any, fallback time.Time) time.Time {
-	raw := toString(value)
-	if raw == "" {
-		return fallback
+	if window%time.Minute == 0 {
+		return fmt.Sprintf("%dm", int(window/time.Minute))
 	}
-	parsed, err := time.Parse(time.RFC3339Nano, raw)
-	if err != nil {
-		return fallback
-	}
-	return parsed.UTC()
-}
-
-func toString(value any) string {
-	if value == nil {
-		return ""
-	}
-	switch vv := value.(type) {
-	case string:
-		return vv
-	default:
-		return fmt.Sprintf("%v", value)
-	}
-}
-
-func toInt(value any) int {
-	switch vv := value.(type) {
-	case int:
-		return vv
-	case int8:
-		return int(vv)
-	case int16:
-		return int(vv)
-	case int32:
-		return int(vv)
-	case int64:
-		return int(vv)
-	case float64:
-		return int(vv)
-	case float32:
-		return int(vv)
-	case json.Number:
-		n, _ := vv.Int64()
-		return int(n)
-	case string:
-		n, err := strconv.Atoi(strings.TrimSpace(vv))
-		if err != nil {
-			return 0
-		}
-		return n
-	default:
-		return 0
-	}
-}
-
-func firstNonZero(values ...int) int {
-	for _, value := range values {
-		if value != 0 {
-			return value
-		}
-	}
-	return 0
-}
-
-func (r *observabilityRepository) normalizeLimit(limit int) int {
-	maxLimit := r.cfg.Loki.MaxQueryLimit
-	if maxLimit <= 0 {
-		maxLimit = 200
-	}
-	if limit <= 0 {
-		return 50
-	}
-	if limit > maxLimit {
-		return maxLimit
-	}
-	return limit
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return value
-		}
-	}
-	return ""
+	return window.String()
 }
 
 type lokiRangeResponse struct {
-	Status string `json:"status"`
-	Data   struct {
-		ResultType string `json:"resultType"`
-		Result     []struct {
+	Data struct {
+		Result []struct {
 			Stream map[string]string `json:"stream"`
 			Values [][]string        `json:"values"`
 		} `json:"result"`
@@ -402,12 +377,9 @@ type lokiRangeResponse struct {
 }
 
 type lokiInstantResponse struct {
-	Status string `json:"status"`
-	Data   struct {
-		ResultType string `json:"resultType"`
-		Result     []struct {
-			Metric map[string]string `json:"metric"`
-			Value  []any             `json:"value"`
+	Data struct {
+		Result []struct {
+			Value []any `json:"value"`
 		} `json:"result"`
 	} `json:"data"`
 }

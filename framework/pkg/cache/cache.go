@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -27,6 +28,26 @@ type Store interface {
 	Set(key string, value []byte, ttl time.Duration) error
 	Delete(key string) error
 	DeleteByPattern(pattern string) error
+}
+
+type Backend interface {
+	Store
+	Increment(key string) (int64, error)
+	Exists(key string) (bool, error)
+	Scan(pattern string) ([]string, error)
+	TTL(key string) (time.Duration, error)
+	Publish(channel string, payload []byte) error
+	Subscribe(ctx context.Context, channel string) (Subscription, error)
+}
+
+type Message struct {
+	Channel string
+	Payload []byte
+}
+
+type Subscription interface {
+	Channel() <-chan Message
+	Close() error
 }
 
 type PaginatedList[T any] struct {

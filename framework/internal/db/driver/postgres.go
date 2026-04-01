@@ -64,6 +64,6 @@ func (p *PostgresClient) Close() error {
 	return p.db.Close()
 }
 
-func (p *PostgresClient) SQLDB() any {
+func (p *PostgresClient) SQLDB() *sql.DB {
 	return p.db
 }

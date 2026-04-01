@@ -25,6 +25,10 @@ func NewStore(cfg frameworkcache.Config) (*Store, error) {
 		return nil, fmt.Errorf("cache instance %q is not configured", instanceName)
 	}
 
+	return NewStoreFromInstance(instanceCfg)
+}
+
+func NewStoreFromInstance(instanceCfg frameworkcache.InstanceConfig) (*Store, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     instanceCfg.Host + ":" + strconv.Itoa(instanceCfg.Port),
 		Username: instanceCfg.Username,
@@ -76,4 +80,87 @@ func (s *Store) DeleteByPattern(pattern string) error {
 			return nil
 		}
 	}
+}
+
+func (s *Store) Increment(key string) (int64, error) {
+	return s.client.Incr(context.Background(), key).Result()
+}
+
+func (s *Store) Exists(key string) (bool, error) {
+	count, err := s.client.Exists(context.Background(), key).Result()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *Store) Scan(pattern string) ([]string, error) {
+	var (
+		cursor uint64
+		keys   []string
+	)
+
+	for {
+		batch, next, err := s.client.Scan(context.Background(), cursor, pattern, 100).Result()
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, batch...)
+		cursor = next
+		if cursor == 0 {
+			return keys, nil
+		}
+	}
+}
+
+func (s *Store) TTL(key string) (time.Duration, error) {
+	return s.client.TTL(context.Background(), key).Result()
+}
+
+func (s *Store) Publish(channel string, payload []byte) error {
+	return s.client.Publish(context.Background(), channel, payload).Err()
+}
+
+func (s *Store) Subscribe(ctx context.Context, channel string) (frameworkcache.Subscription, error) {
+	pubsub := s.client.Subscribe(ctx, channel)
+	if _, err := pubsub.Receive(ctx); err != nil {
+		_ = pubsub.Close()
+		return nil, err
+	}
+
+	out := make(chan frameworkcache.Message)
+	go func() {
+		defer close(out)
+		ch := pubsub.Channel()
+		for {
+			select {
+			case <-ctx.Done():
+				_ = pubsub.Close()
+				return
+			case msg, ok := <-ch:
+				if !ok || msg == nil {
+					return
+				}
+				out <- frameworkcache.Message{
+					Channel: msg.Channel,
+					Payload: []byte(msg.Payload),
+				}
+			}
+		}
+	}()
+
+	return &subscription{pubsub: pubsub, ch: out}, nil
+}
+
+type subscription struct {
+	pubsub *redis.PubSub
+	ch     <-chan frameworkcache.Message
+}
+
+func (s *subscription) Channel() <-chan frameworkcache.Message {
+	return s.ch
+}
+
+func (s *subscription) Close() error {
+	return s.pubsub.Close()
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/redis"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 type JsonHandler func(msg string) error
@@ -29,11 +31,11 @@ type asyncMessage struct {
 
 // Publish sends a raw string message to a channel.
 func publish(channel string, message string) error {
-	rdb := redis.GetInstance("pubsub")
-	if rdb == nil {
-		return fmt.Errorf("redis instance 'pubsub' not available")
+	rdb, err := redisBackend()
+	if err != nil {
+		return err
 	}
-	err := rdb.Publish(ctx, channel, message).Err()
+	err = rdb.Publish(channel, []byte(message))
 	if err != nil {
 		logger.Error("❌ Redis PUBLISH error:", err)
 	} else {
@@ -112,8 +114,8 @@ func subscribe(channel string, handler JsonHandler) {
 	pubsubCancelFuncs[channel] = cancel
 	channelMu.Unlock()
 
-	rdb := redis.GetInstance("pubsub")
-	if rdb == nil {
+	rdb, err := redisBackend()
+	if err != nil {
 		logger.Warn("⚠️ Redis instance 'pubsub' not available for channel: " + channel)
 		return
 	}
@@ -127,20 +129,25 @@ func subscribe(channel string, handler JsonHandler) {
 
 		logger.Debug("🔔 Redis SUBSCRIBED to channel: " + channel)
 		for {
-			sub := rdb.Subscribe(ctx, channel)
+			sub, err := rdb.Subscribe(subCtx, channel)
+			if err != nil {
+				logger.Warn("⚠️ Redis subscribe failed, retrying: " + channel)
+				time.Sleep(time.Second)
+				continue
+			}
 			ch := sub.Channel()
 
 			for {
 				select {
 				case msg, ok := <-ch:
-					if !ok || msg == nil {
+					if !ok {
 						logger.Warn("⚠️ Redis subscription channel closed, retrying: " + channel)
 						_ = sub.Close()
 						time.Sleep(time.Second)
 						goto retry
 					}
 
-					logger.Debug("📨 Redis RECEIVED [" + msg.Channel + "]: " + msg.Payload)
+					logger.Debug("📨 Redis RECEIVED [" + msg.Channel + "]: " + string(msg.Payload))
 
 					channelMu.RLock()
 					handlers := append([]JsonHandler(nil), channelHandlers[channel]...)
@@ -156,7 +163,7 @@ func subscribe(channel string, handler JsonHandler) {
 									logger.Error(fmt.Sprintf("❌ Redis handler panic [%s]: %v", channel, r))
 								}
 							}()
-							_ = handler(msg.Payload)
+							_ = handler(string(msg.Payload))
 						}(h)
 					}
 					wg.Wait()
@@ -169,6 +176,28 @@ func subscribe(channel string, handler JsonHandler) {
 		retry:
 		}
 	}()
+}
+
+func redisBackend() (frameworkcache.Backend, error) {
+	if err := ensurePubSubRedis(); err != nil {
+		return nil, fmt.Errorf("redis instance 'pubsub' not available: %w", err)
+	}
+
+	rdb, err := frameworkruntimeCacheBackend("pubsub")
+	if err == nil {
+		return rdb, nil
+	}
+
+	return frameworkruntimeCacheBackend("cache")
+}
+
+func ensurePubSubRedis() error {
+	redis.Init()
+	return nil
+}
+
+func frameworkruntimeCacheBackend(name string) (frameworkcache.Backend, error) {
+	return frameworkruntime.CacheBackend(name)
 }
 
 // Subscribe subscribes to a channel and decodes each message as JSON into T.

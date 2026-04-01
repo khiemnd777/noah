@@ -5,20 +5,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/khiemnd777/noah_api/modules/observability/model"
-	"github.com/khiemnd777/noah_api/modules/observability/repository"
+	"github.com/khiemnd777/noah_framework/modules/observability/model"
+	"github.com/khiemnd777/noah_framework/modules/observability/repository"
 )
 
-type ObservabilityService interface {
+type Service interface {
 	ListLogs(ctx context.Context, query model.ListLogsQuery) ([]model.LogEntry, error)
 	GetSummary(ctx context.Context, query model.ListLogsQuery) (model.Summary, error)
 }
 
 type observabilityService struct {
-	repo repository.ObservabilityRepository
+	repo repository.Repository
 }
 
-func NewObservabilityService(repo repository.ObservabilityRepository) ObservabilityService {
+func New(repo repository.Repository) Service {
 	return &observabilityService{repo: repo}
 }
 

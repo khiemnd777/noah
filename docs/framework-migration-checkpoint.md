@@ -12,6 +12,12 @@
 - Phase 7: Partial
 
 ### Completed This Run
+- Moved the built-in observability module implementation out of `api/modules/observability/*` and into `framework/modules/observability/*`, including handler, service, repository, model, module wiring, and framework-owned module config files.
+- Reduced `api/modules/observability` to a composition-only shim: app config to framework config mapping, Ent bootstrap for RBAC permission checks, and route/middleware composition.
+- Updated module discovery/startup helpers so `framework/modules/*` owns module discovery and config lookup, while `api/modules/*` can remain composition entrypoints during coexistence.
+- Moved the framework DB raw-SQL bridge out of `framework/pkg/db` and into `framework/runtime/db.go`, so the public DB contract no longer exposes `database/sql`.
+- Consolidated Redis/cache/pubsub instance ownership under `framework/runtime/cache.go` plus `framework/internal/cache/redis`, leaving `api/shared/redis` and `api/shared/pubsub` as framework-backed compatibility shims only.
+- Removed unused app-local DB driver ownership in `api/shared/db/driver/*` and `api/shared/db/interface/client.go`.
 - Established a top-level `framework/` Go module and root `go.work`.
 - Created initial framework contract packages for App, Module, Context, Router, Cache, DB, Auth, and Lifecycle.
 - Added initial internal adapters for Fiber app/router, Redis cache, DB client factory, and JSON-backed lifecycle storage.
@@ -26,11 +32,16 @@
 
 ### Validation Snapshot
 - No frontend files changed.
+- `framework/`: `GOCACHE="$PWD/.gocache" go test ./runtime ./modules/observability/...` passed.
+- `api/`: `GOCACHE="$PWD/.gocache" go test ./modules/observability/... ./shared/runtime ./scripts/module_runner/runner ./gateway/...` passed.
 - `framework/`: `go test ./...` passed.
 - `api/`: `GOCACHE="$PWD/.gocache" go test ./...` passed.
 - Backend compatibility is preserved through `api/shared/*` wrappers plus framework-backed gateway boot.
+- `framework/pkg/` no longer exposes raw `*sql.DB` or Redis client types.
+- Observability is now discovered from `framework/modules/observability` through the existing multi-root loader, with `api/modules/observability/main.go` retained only as a composition/startup bridge.
 
 ### Remaining Work
 - Complete API-side migration for module boot composition and replace remaining raw DB/Fiber bridging with stable framework-native contracts.
 - Reduce remaining Fiber-native response/body helper usage inside handler implementations by introducing stable HTTP response helpers where useful.
 - Reduce remaining direct Redis and raw SQL usage outside the newly introduced framework boundaries.
+- Repeat the same framework-owned module move for the next built-in module, then remove more API-side composition assumptions from module startup over time.

@@ -6,7 +6,7 @@ import (
 	"github.com/khiemnd777/noah_api/modules/auth/handler"
 	"github.com/khiemnd777/noah_api/modules/auth/repository"
 	"github.com/khiemnd777/noah_api/modules/auth/service"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/module"
@@ -24,13 +24,13 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			authSecret := utils.GetAuthSecret()
 			db := deps.Ent.(*generated.Client)
 			repo := repository.NewAuthRepository(db)
 			svc := service.NewAuthService(repo, authSecret)
 			h := handler.NewAuthHandler(svc)
-			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route)))
+			h.RegisterRoutes(app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route)))
 		},
 	})
 }

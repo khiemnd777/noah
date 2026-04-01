@@ -7,7 +7,7 @@ import (
 	"github.com/khiemnd777/noah_api/modules/search/handler"
 	"github.com/khiemnd777/noah_api/modules/search/repository"
 	"github.com/khiemnd777/noah_api/modules/search/service"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/middleware"
@@ -26,11 +26,11 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			repo := repository.NewSearchRepository(deps)
 			svc := service.NewSearchService(repo, deps)
 			h := handler.NewSearchHandler(svc, deps)
-			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
+			h.RegisterRoutes(app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
 		},
 	})
 }

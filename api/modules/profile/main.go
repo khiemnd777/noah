@@ -1,14 +1,12 @@
-// modules/profile/main.go
 package main
 
 import (
 	entsql "entgo.io/ent/dialect/sql"
-
 	"github.com/khiemnd777/noah_api/modules/profile/config"
 	"github.com/khiemnd777/noah_api/modules/profile/handler"
 	"github.com/khiemnd777/noah_api/modules/profile/repository"
 	"github.com/khiemnd777/noah_api/modules/profile/service"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/middleware"
@@ -27,12 +25,12 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			})
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			db := deps.Ent.(*generated.Client)
 			repo := repository.NewProfileRepository(db, deps)
 			svc := service.NewProfileService(repo, deps)
 			h := handler.NewProfileHandler(svc, deps)
-			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
+			h.RegisterRoutes(app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
 		},
 	})
 }

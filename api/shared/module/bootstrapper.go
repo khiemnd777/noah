@@ -1,14 +1,11 @@
 package module
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	appLogger "github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/khiemnd777/noah_api/shared/app"
+	sharedapp "github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/cache"
 	"github.com/khiemnd777/noah_api/shared/circuitbreaker"
 	"github.com/khiemnd777/noah_api/shared/config"
@@ -19,12 +16,13 @@ import (
 	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkdb "github.com/khiemnd777/noah_framework/pkg/db"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 type ModuleDeps[T any] struct {
 	Config    *T
-	DB        *sql.DB
+	DB        *frameworkdb.SQLDB
 	Ent       any
 	SharedEnt any
 	App       frameworkapp.Application
@@ -118,15 +116,8 @@ func StartModule[T any](opts ModuleOptions[T]) {
 		Host:        config.Get().Server.Host,
 		Port:        config.Get().Server.Port,
 	})
-	fiberApp, err := app.FiberApplication(appRuntime)
-	if err != nil {
-		logger.Error(fmt.Sprintf("❌ Failed to bind framework app to module runtime: %v", err))
-		return
-	}
-	fiberApp.Use(appLogger.New())
-
-	fiberApp.Get("/health", func(c *fiber.Ctx) error {
-		return c.SendStatus(fiber.StatusOK)
+	appRuntime.Router().Get("/health", func(c frameworkhttp.Context) error {
+		return c.SendStatus(200)
 	})
 
 	// Step 5: Register routes
@@ -172,7 +163,7 @@ func StartFiber(appRuntime frameworkapp.Application, moduleName string) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 
 	// 2) Bind đúng cổng (KHÔNG ListenOnAvailablePort nữa)
-	reserved, err := app.ListenOnAvailablePort(host, port)
+	reserved, err := sharedapp.ListenOnAvailablePort(host, port)
 
 	if err != nil {
 		logger.Error(fmt.Sprintf("❌ Cannot start listener: %v", err))
@@ -197,7 +188,7 @@ func StartFiber(appRuntime frameworkapp.Application, moduleName string) {
 	}
 }
 
-func fiberSafeSQLDB(client frameworkdb.Client) *sql.DB {
+func fiberSafeSQLDB(client frameworkdb.Client) *frameworkdb.SQLDB {
 	sqlDB, err := db.SQLDB(client)
 	if err != nil {
 		return nil

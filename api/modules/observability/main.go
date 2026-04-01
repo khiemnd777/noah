@@ -6,7 +6,7 @@ import (
 	"github.com/khiemnd777/noah_api/modules/observability/handler"
 	"github.com/khiemnd777/noah_api/modules/observability/repository"
 	"github.com/khiemnd777/noah_api/modules/observability/service"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/middleware"
@@ -25,11 +25,11 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			repo := repository.NewObservabilityRepository()
 			svc := service.NewObservabilityService(repo)
 			h := handler.NewObservabilityHandler(svc, deps)
-			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
+			h.RegisterRoutes(app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
 		},
 	})
 }

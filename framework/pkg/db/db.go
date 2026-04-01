@@ -1,5 +1,7 @@
 package db
 
+import "database/sql"
+
 type Config struct {
 	Provider    string
 	AutoMigrate bool
@@ -20,6 +22,8 @@ type MongoConfig struct {
 	URI      string
 	Database string
 }
+
+type SQLDB = sql.DB
 
 type Client interface {
 	Connect() error

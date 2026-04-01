@@ -2,12 +2,11 @@ package main
 
 import (
 	entsql "entgo.io/ent/dialect/sql"
-
 	"github.com/khiemnd777/noah_api/modules/rbac/config"
 	"github.com/khiemnd777/noah_api/modules/rbac/handler"
 	"github.com/khiemnd777/noah_api/modules/rbac/repository"
 	"github.com/khiemnd777/noah_api/modules/rbac/service"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/middleware"
@@ -26,14 +25,13 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			db := deps.Ent.(*generated.Client)
-
 			rolesRepo := repository.NewRoleRepository(db)
 			permsRepo := repository.NewPermissionRepository(db)
 			svc := service.NewRBACService(rolesRepo, permsRepo)
 			h := handler.NewRBACHandler(db, svc)
-			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
+			h.RegisterRoutes(app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth()))
 		},
 	})
 }

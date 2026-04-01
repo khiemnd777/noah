@@ -7,7 +7,7 @@ import (
 	"github.com/khiemnd777/noah_api/modules/token/jobs"
 	"github.com/khiemnd777/noah_api/modules/token/repository"
 	"github.com/khiemnd777/noah_api/modules/token/service"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/cron"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
@@ -27,13 +27,13 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			authSecret := utils.GetAuthSecret()
 			db := deps.Ent.(*generated.Client)
 			repo := repository.NewTokenRepository(db)
 			svc := service.NewTokenService(repo, authSecret)
 			h := handler.NewTokenHandler(svc)
-			h.RegisterRoutes(sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireInternal()))
+			h.RegisterRoutes(app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireInternal()))
 
 			cron.RegisterJob(jobs.NewClearResfreshTokenJob(svc))
 		},

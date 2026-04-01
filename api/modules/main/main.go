@@ -8,7 +8,7 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/department/service"
 	_ "github.com/khiemnd777/noah_api/modules/main/features"
 	"github.com/khiemnd777/noah_api/modules/main/registry"
-	sharedapp "github.com/khiemnd777/noah_api/shared/app"
+	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/db/ent"
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
@@ -28,20 +28,16 @@ func main() {
 				return generated.NewClient(generated.Driver(drv))
 			}, cfg.Database.AutoMigrate)
 		},
-		OnRegistry: func(app frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
+		OnRegistry: func(moduleApp frameworkapp.Application, deps *module.ModuleDeps[config.ModuleConfig]) {
 			repo := repository.NewDepartmentRepository(deps.Ent.(*generated.Client), deps)
-			router := sharedapp.Group(app, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth())
+			router := app.Group(moduleApp, utils.GetModuleRoute(deps.Config.Server.Route), middleware.RequireAuth())
 
-			router.Use("/:dept_id<int>/*",
-				middleware.RequireDepartmentMember("dept_id"),
-			)
+			router.Use("/:dept_id<int>/*", middleware.RequireDepartmentMember("dept_id"))
 
-			// Department
 			svc := service.NewDepartmentService(repo, deps)
 			h := handler.NewDepartmentHandler(svc, deps)
 			h.RegisterRoutes(router)
 
-			// Features
 			cfStore := &customfields.PGStore{DB: deps.DB}
 			cfMgr := customfields.NewManager(cfStore)
 			registry.Init(router, deps, cfMgr, registry.InitOptions{

@@ -2,7 +2,7 @@ package runtime
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworklifecycle "github.com/khiemnd777/noah_framework/pkg/lifecycle"
+	frameworkmodule "github.com/khiemnd777/noah_framework/pkg/module"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	"gopkg.in/yaml.v3"
 )
@@ -49,25 +50,30 @@ func getDestPort(port int) int {
 	return mPort + port
 }
 
-func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
+func DefaultDiscoveryRoots() []frameworkmodule.DiscoveryRoot {
+	apiRoot := utils.GetProjectRootDir()
+	repoRoot := filepath.Clean(filepath.Join(apiRoot, ".."))
+
+	return []frameworkmodule.DiscoveryRoot{
+		{Name: "framework", Path: filepath.Join(repoRoot, "framework", "modules")},
+		{Name: "api-main", Path: filepath.Join(apiRoot, "modules", "main")},
+		{Name: "api", Path: filepath.Join(apiRoot, "modules")},
+	}
+}
+
+func GenerateRegistry(roots []frameworkmodule.DiscoveryRoot) (Registry, []*app.Reserved, error) {
 	reg := Registry{}
 	var rs []*app.Reserved
 
-	entries, err := os.ReadDir(modDir)
+	descriptors, err := frameworkruntime.DiscoverModules(roots)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		name := e.Name()
-
-		cfgFile := utils.GetModuleConfigPath(name)
-		_, routeFromCfg, hostFromCfg, portFromCfg, externalFromCfg, err := loadServerSection(cfgFile)
+	for _, descriptor := range descriptors {
+		_, routeFromCfg, hostFromCfg, portFromCfg, externalFromCfg, err := loadServerSection(descriptor.ConfigPath)
 		if err != nil {
-			fmt.Printf("⚠️  skip %s: %v\n", name, err)
+			fmt.Printf("⚠️  skip %s: %v\n", descriptor.ID, err)
 			continue
 		}
 
@@ -75,12 +81,12 @@ func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
 		port := getDestPort(portFromCfg)
 		r, portErr := app.EnsurePortAvailable(host, port)
 		if portErr != nil {
-			fmt.Printf("🛑  cannot alloc port for %s\n", name)
+			fmt.Printf("🛑  cannot alloc port for %s\n", descriptor.ID)
 			continue
 		}
 
 		rs = append(rs, r)
-		reg[name] = RunningModule{
+		reg[descriptor.ID] = RunningModule{
 			PID:      0,
 			Host:     host,
 			Port:     r.Port,

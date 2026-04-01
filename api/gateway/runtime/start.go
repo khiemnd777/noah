@@ -12,13 +12,12 @@ import (
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/runtime"
-	"github.com/khiemnd777/noah_api/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 
 func Start(app frameworkapp.Application) error {
-	reg, reserved, err := runtime.GenerateRegistry(utils.GetFullPath("modules"))
+	reg, reserved, err := runtime.GenerateRegistry(runtime.DefaultDiscoveryRoots())
 	if err != nil {
 		return fmt.Errorf("failed to load modules: %w", err)
 	}

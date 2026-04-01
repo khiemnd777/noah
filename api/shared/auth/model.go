@@ -1,6 +1,5 @@
 package auth
 
-type AuthTokenPair struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-}
+import frameworkauth "github.com/khiemnd777/noah_framework/pkg/auth"
+
+type AuthTokenPair = frameworkauth.TokenPair

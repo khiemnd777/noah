@@ -7,16 +7,23 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/gateway/proxy"
 	"github.com/khiemnd777/noah_api/scripts/module_runner/runner"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/runtime"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
-func Start(app *fiber.App) error {
+func Start(app frameworkapp.Application) error {
+	fiberApp, ok := frameworkruntime.AsFiberApp(app)
+	if !ok {
+		return fmt.Errorf("gateway requires a fiber-backed application during migration")
+	}
+
 	reg, reserved, err := runtime.GenerateRegistry(utils.GetFullPath("modules"))
 	if err != nil {
 		return fmt.Errorf("failed to load modules: %w", err)
@@ -47,7 +54,7 @@ func Start(app *fiber.App) error {
 			if m.External {
 				target := fmt.Sprintf("http://%s:%d", m.Host, m.Port)
 				logger.Info(fmt.Sprintf("Registering route %s → %s", m.Route, target))
-				err := proxy.RegisterReverseProxy(app, m.Route, []string{target})
+				err := proxy.RegisterReverseProxy(fiberApp, m.Route, []string{target})
 				if err != nil {
 					logger.Warn(fmt.Sprintf("Failed to register module [%s]", name), err)
 				}
@@ -66,21 +73,17 @@ func Start(app *fiber.App) error {
 	logger.Info("Gateway listening on " + addr)
 
 	// Get dev.log
-	routeGetLog(app)
+	routeGetLog(app.Router())
 
 	// API Home Page
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Router().Get("/", func(c frameworkhttp.Context) error {
 		return c.SendString(`🚀 NOAH API has launched already!`)
 	})
-
-	if err := app.Listen(addr); err != nil {
-		return fmt.Errorf("gateway listen failed: %w", err)
-	}
 	return nil
 }
 
-func routeGetLog(app *fiber.App) fiber.Router {
-	return app.Get("/__log", func(c *fiber.Ctx) error {
+func routeGetLog(router frameworkhttp.Router) {
+	router.Get("/__log", func(c frameworkhttp.Context) error {
 		if c.Get("Authorization") != fmt.Sprintf("Bearer %s", config.Get().Auth.InternalLogToken) {
 			return c.Status(403).SendString("Access denied")
 		}

@@ -1,69 +1,46 @@
 package runtime
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/khiemnd777/noah_api/shared/app"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworklifecycle "github.com/khiemnd777/noah_framework/pkg/lifecycle"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	"gopkg.in/yaml.v3"
 )
 
-type RunningModule struct {
-	PID      int       `json:"pid"`
-	Host     string    `json:"host"`
-	Port     int       `json:"port"`
-	RunAt    time.Time `json:"run_at"`
-	External bool      `json:"external"`
-	Route    string    `json:"router"`
-}
-
-type Registry map[string]RunningModule
+type RunningModule = frameworklifecycle.ModuleInfo
+type Registry = frameworklifecycle.Registry
 
 var (
 	registryPath = "tmp/runtime.json"
-	mu           sync.Mutex
+	storeOnce    sync.Once
 )
 
-// LoadRegistry đọc file; nếu chưa có trả map rỗng.
+func lifecycleStore() frameworklifecycle.Store {
+	storeOnce.Do(func() {
+		frameworkruntime.ConfigureDefaultLifecycleStore(registryPath)
+	})
+
+	store, _ := frameworklifecycle.DefaultStore()
+	return store
+}
+
 func LoadRegistry() (Registry, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	return withRegistryLock(func() (Registry, error) {
-		return loadRegistryUnlocked()
-	})
+	return lifecycleStore().Load()
 }
 
-// SaveRegistry ghi đè file.
 func SaveRegistry(reg Registry) error {
-	mu.Lock()
-	defer mu.Unlock()
-
-	_, err := withRegistryLock(func() (struct{}, error) {
-		return struct{}{}, saveRegistryUnlocked(reg)
-	})
-	return err
+	return lifecycleStore().Save(reg)
 }
 
-// Register module (gọi trong main.go sau khi biết realPort)
 func Register(name, route, host string, port int, external bool) error {
-	return UpdateRegistry(func(reg Registry) {
-		reg[name] = RunningModule{
-			PID:      os.Getpid(),
-			Host:     host,
-			Port:     port,
-			Route:    route,
-			RunAt:    time.Now(),
-			External: external,
-		}
-	})
+	return frameworklifecycle.Register(name, route, host, port, external)
 }
 
 func getDestPort(port int) int {
@@ -72,10 +49,6 @@ func getDestPort(port int) int {
 	return mPort + port
 }
 
-// GenerateRegistry duyệt modules/, gán host = "127.0.0.1",
-//   - Nếu config.yaml có port>0  ➜ giữ nguyên
-//   - Nếu port==0               ➜ auto-allocate
-//   - Ghi toàn bộ vào tmp/runtime.json
 func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
 	reg := Registry{}
 	var rs []*app.Reserved
@@ -92,7 +65,7 @@ func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
 		name := e.Name()
 
 		cfgFile := utils.GetModuleConfigPath(name)
-		raw, routeFromCfg, hostFromCfg, portFromCfg, externalFromCfg, err := loadServerSection(cfgFile)
+		_, routeFromCfg, hostFromCfg, portFromCfg, externalFromCfg, err := loadServerSection(cfgFile)
 		if err != nil {
 			fmt.Printf("⚠️  skip %s: %v\n", name, err)
 			continue
@@ -107,7 +80,6 @@ func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
 		}
 
 		rs = append(rs, r)
-
 		reg[name] = RunningModule{
 			PID:      0,
 			Host:     host,
@@ -116,8 +88,6 @@ func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
 			RunAt:    time.Now(),
 			External: externalFromCfg,
 		}
-
-		_ = raw
 	}
 
 	if err := SaveRegistry(reg); err != nil {
@@ -127,75 +97,7 @@ func GenerateRegistry(modDir string) (Registry, []*app.Reserved, error) {
 }
 
 func UpdateRegistry(update func(Registry)) error {
-	mu.Lock()
-	defer mu.Unlock()
-
-	_, err := withRegistryLock(func() (struct{}, error) {
-		reg, err := loadRegistryUnlocked()
-		if err != nil {
-			return struct{}{}, err
-		}
-		update(reg)
-		return struct{}{}, saveRegistryUnlocked(reg)
-	})
-	return err
-}
-
-func loadRegistryUnlocked() (Registry, error) {
-	data, err := os.ReadFile(registryPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return Registry{}, nil
-		}
-		return nil, err
-	}
-
-	reg := Registry{}
-	if err := json.Unmarshal(data, &reg); err != nil {
-		return nil, err
-	}
-	return reg, nil
-}
-
-func saveRegistryUnlocked(reg Registry) error {
-	data, err := json.MarshalIndent(reg, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(registryPath), 0o755); err != nil {
-		return err
-	}
-
-	tmpPath := registryPath + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmpPath, registryPath)
-}
-
-func withRegistryLock[T any](fn func() (T, error)) (T, error) {
-	lockPath := registryPath + ".lock"
-	if err := os.MkdirAll(filepath.Dir(lockPath), 0o755); err != nil {
-		var zero T
-		return zero, err
-	}
-
-	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o644)
-	if err != nil {
-		var zero T
-		return zero, err
-	}
-	defer lockFile.Close()
-
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
-		var zero T
-		return zero, err
-	}
-	defer func() {
-		_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-	}()
-
-	return fn()
+	return lifecycleStore().Update(update)
 }
 
 func loadServerSection(cfgPath string) (

@@ -4,6 +4,7 @@ go 1.24.1
 
 require (
 	entgo.io/ent v0.14.4
+	github.com/khiemnd777/noah_framework v0.0.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/fatih/color v1.18.0
 	github.com/gofiber/fiber/v2 v2.52.8
@@ -28,6 +29,8 @@ require (
 	golang.org/x/text v0.30.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/khiemnd777/noah_framework => ../framework
 
 require (
 	ariga.io/atlas v0.36.1 // indirect

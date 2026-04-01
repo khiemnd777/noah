@@ -1,14 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
-	"github.com/gofiber/fiber/v2"
 	gateway "github.com/khiemnd777/noah_api/gateway/runtime"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
 	"github.com/khiemnd777/noah_api/shared/utils"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func main() {
@@ -33,9 +35,17 @@ func main() {
 	})
 
 	logger.Info("Starting API Gateway...")
-	app := fiber.New()
+	app := frameworkruntime.NewApplication(frameworkapp.Config{
+		BodyLimitMB: config.Get().Server.BodyLimitMB,
+		Host:        config.Get().Server.Host,
+		Port:        config.Get().Server.Port,
+	})
 
 	if err := gateway.Start(app); err != nil {
 		logger.Error("Gateway error", err)
+	}
+
+	if err := app.Listen(fmt.Sprintf("%s:%d", config.Get().Server.Host, config.Get().Server.Port)); err != nil {
+		logger.Error("Gateway listen error", err)
 	}
 }

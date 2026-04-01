@@ -1,12 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	entsql "entgo.io/ent/dialect/sql"
 	gateway "github.com/khiemnd777/noah_api/gateway/runtime"
-	"github.com/khiemnd777/noah_api/shared/app/fiber_app"
 	"github.com/khiemnd777/noah_api/shared/bootstrap"
 	"github.com/khiemnd777/noah_api/shared/cache"
 	"github.com/khiemnd777/noah_api/shared/circuitbreaker"
@@ -21,6 +21,9 @@ import (
 	"github.com/khiemnd777/noah_api/shared/utils"
 	"github.com/khiemnd777/noah_api/shared/worker"
 	_ "github.com/khiemnd777/noah_api/starter"
+	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
+	frameworkcache "github.com/khiemnd777/noah_framework/pkg/cache"
+	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 
 func main() {
@@ -69,6 +72,10 @@ func main() {
 
 	cache.InitTTLConstants()
 
+	if err := frameworkruntime.ConfigureDefaultCache(toFrameworkCacheConfig(config.Get().Redis)); err != nil {
+		log.Fatalf("Cannot initialize framework cache: %v", err)
+	}
+
 	// Initialize Redis
 	redis.Init()
 
@@ -99,9 +106,31 @@ func main() {
 
 	cron.StartAllCrons()
 
-	_, fApp := fiber_app.Init()
-	if err := gateway.Start(fApp); err != nil {
+	app := frameworkruntime.NewApplication(frameworkapp.Config{
+		BodyLimitMB: config.Get().Server.BodyLimitMB,
+		Host:        config.Get().Server.Host,
+		Port:        config.Get().Server.Port,
+	})
+	if err := gateway.Start(app); err != nil {
 		log.Fatalf("Gateway error: %v", err)
 	}
-	select {}
+	if err := app.Listen(fmt.Sprintf("%s:%d", config.Get().Server.Host, config.Get().Server.Port)); err != nil {
+		log.Fatalf("Gateway listen error: %v", err)
+	}
+}
+
+func toFrameworkCacheConfig(cfg config.RedisConfig) frameworkcache.Config {
+	instances := make(map[string]frameworkcache.InstanceConfig, len(cfg.Instances))
+	for name, instance := range cfg.Instances {
+		instances[name] = frameworkcache.InstanceConfig{
+			DB:       instance.DB,
+			Host:     instance.Host,
+			Password: instance.Password,
+			Port:     instance.Port,
+		}
+	}
+	return frameworkcache.Config{
+		DefaultInstance: "cache",
+		Instances:       instances,
+	}
 }

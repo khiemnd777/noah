@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
 )
 
 var (

@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	relation "github.com/khiemnd777/noah_api/modules/main/features/__relation/policy"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	dbutils "github.com/khiemnd777/noah_api/shared/db/utils"
-	"github.com/khiemnd777/noah_api/shared/utils"
-	tableutils "github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	dbutils "github.com/khiemnd777/noah_framework/shared/db/utils"
+	"github.com/khiemnd777/noah_framework/shared/utils"
+	tableutils "github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type RelationRepository struct{}

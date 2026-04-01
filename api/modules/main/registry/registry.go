@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/khiemnd777/noah_api/modules/main/config"
-	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
-	"github.com/khiemnd777/noah_api/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/metadata/customfields"
+	"github.com/khiemnd777/noah_framework/shared/module"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 

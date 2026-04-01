@@ -5,12 +5,12 @@ import (
 
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	"github.com/khiemnd777/noah_api/modules/main/department/model"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated/department"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated/departmentmember"
-	"github.com/khiemnd777/noah_api/shared/mapper"
-	"github.com/khiemnd777/noah_api/shared/module"
-	"github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated/department"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated/departmentmember"
+	"github.com/khiemnd777/noah_framework/shared/mapper"
+	"github.com/khiemnd777/noah_framework/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type DepartmentRepository interface {

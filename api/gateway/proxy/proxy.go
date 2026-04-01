@@ -9,7 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	fiberws "github.com/gofiber/websocket/v2"
-	"github.com/khiemnd777/noah_api/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/logger"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"

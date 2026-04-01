@@ -7,14 +7,14 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	model "github.com/khiemnd777/noah_api/modules/main/features/__model"
 	"github.com/khiemnd777/noah_api/modules/main/features/staff/service"
-	"github.com/khiemnd777/noah_api/shared/app"
-	"github.com/khiemnd777/noah_api/shared/app/client_error"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	dbutils "github.com/khiemnd777/noah_api/shared/db/utils"
-	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
-	"github.com/khiemnd777/noah_api/shared/module"
-	"github.com/khiemnd777/noah_api/shared/utils"
-	"github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/app"
+	"github.com/khiemnd777/noah_framework/shared/app/client_error"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	dbutils "github.com/khiemnd777/noah_framework/shared/db/utils"
+	"github.com/khiemnd777/noah_framework/shared/middleware/rbac"
+	"github.com/khiemnd777/noah_framework/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type StaffHandler struct {

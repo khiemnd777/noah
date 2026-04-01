@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/khiemnd777/noah_api/shared/cache"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/cache"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 	"github.com/lib/pq"
 )
 

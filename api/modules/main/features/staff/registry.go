@@ -6,9 +6,9 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/features/staff/repository"
 	"github.com/khiemnd777/noah_api/modules/main/features/staff/service"
 	"github.com/khiemnd777/noah_api/modules/main/registry"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
-	"github.com/khiemnd777/noah_api/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/metadata/customfields"
+	"github.com/khiemnd777/noah_framework/shared/module"
 	frameworkhttp "github.com/khiemnd777/noah_framework/pkg/http"
 )
 

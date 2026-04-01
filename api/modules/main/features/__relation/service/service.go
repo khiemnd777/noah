@@ -7,11 +7,11 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	relation "github.com/khiemnd777/noah_api/modules/main/features/__relation/policy"
 	"github.com/khiemnd777/noah_api/modules/main/features/__relation/repository"
-	"github.com/khiemnd777/noah_api/shared/cache"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	dbutils "github.com/khiemnd777/noah_api/shared/db/utils"
-	"github.com/khiemnd777/noah_api/shared/module"
-	tableutils "github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/cache"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	dbutils "github.com/khiemnd777/noah_framework/shared/db/utils"
+	"github.com/khiemnd777/noah_framework/shared/module"
+	tableutils "github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type RelationService struct {

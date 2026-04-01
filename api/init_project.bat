@@ -7,9 +7,9 @@ IF EXIST vendor (
     rmdir /s /q vendor
 )
 
-REM Step 1: Generate Ent for shared
+REM Step 1: Generate Ent for framework shared
 echo 👉 Generating Ent for shared
-go run -mod=mod entgo.io/ent/cmd/ent generate ./shared/db/ent/schema --target ./shared/db/ent/generated --feature sql/execquery
+go run -mod=mod entgo.io/ent/cmd/ent generate ../framework/shared/db/ent/schema --target ../framework/shared/db/ent/generated --feature sql/execquery
 IF ERRORLEVEL 1 GOTO error
 
 REM Step 1.1: Init db

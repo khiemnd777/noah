@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/khiemnd777/noah_api/shared/cache"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/cache"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
 )
 
 type idxItem struct {

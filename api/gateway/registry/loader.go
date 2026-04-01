@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/khiemnd777/noah_api/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/config"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 	"gopkg.in/yaml.v3"
 )

@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/khiemnd777/noah_api/modules/{{.module}}/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/db/ent"
-	"github.com/khiemnd777/noah_api/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/db/ent"
+	"github.com/khiemnd777/noah_framework/shared/logger"
 )
 
 func EntBootstrap(provider string, db *sql.DB, builder ent.EntClientBuilder, autoMigrate bool) (any, error) {

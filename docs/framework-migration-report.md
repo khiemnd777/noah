@@ -7,6 +7,7 @@ This phase also moved the built-in observability and attribute modules into fram
 The latest migration batch removed those composition bridges for the low-complexity built-ins: `attribute`, `folder`, and `profile` now boot directly from `framework/modules/*` through a framework-owned runtime bootstrap path, and their API-side module directories have been deleted.
 This cleanup batch extracted the remaining legacy shared-layer runtime ownership from `api/shared/*` into `framework/runtime`: module registry/discovery, port/process helpers, circuit breaker, retry-aware HTTP wrappers, HTTP client, JWT/auth context helpers, pubsub, and generic runtime/path/config helpers now live in the framework, while `api/shared/*` keeps only compatibility shims or app-local behavior.
 This final built-in migration batch completed the module boundary move: every built-in module now lives under `framework/modules/*`, the corresponding `api/modules/*` built-in trees have been removed, and only `api/modules/main` remains application-owned. To preserve behavior while finishing the cutover, the remaining shared support used by those modules was internalized under `framework/internal/legacy/shared/*`, so framework modules no longer import `api/shared/*` directly.
+The final shared-layer cutover is now complete: the entire legacy shared surface moved from `api/shared/*` to `framework/shared/*`, all application imports and generator paths were repointed to framework ownership, and `api/shared` has been deleted.
 
 ## Structural Changes
 - Added root workspace wiring with `go.work`.
@@ -61,6 +62,8 @@ This final built-in migration batch completed the module boundary move: every bu
   - `framework/modules/user/*`
 - Added internalized framework-owned legacy support packages required by the final module migration:
   - `framework/internal/legacy/shared/*`
+- Added exported framework-owned shared packages for the final consumer cutover:
+  - `framework/shared/*`
 - Updated `api/go.mod` to consume the local framework module through `replace`.
 - Migrated backend entrypoints and shims:
   - `api/main.go`
@@ -122,21 +125,24 @@ This final built-in migration batch completed the module boundary move: every bu
   - Full backend test suite passed, but remaining direct technology coupling still exists outside the migrated boundaries.
 - Final built-in module ownership cutover: Passed
   - Built-in module discovery, compilation, and application-side boot now resolve from `framework/modules/*` only.
+- Final shared-layer ownership cutover: Passed
+  - `api/shared` no longer exists, `api` imports `framework/shared/*`, and both Go modules still build and test successfully.
 
 ## Remaining Risks
-- `framework/pkg/db` still cannot be the primary API boundary for `api/` until raw `*sql.DB` dependencies are refactored behind framework-level contracts.
 - Handler implementations still reference some Fiber-native response constants and low-level request helpers even though their exposed seams now use framework HTTP contracts.
 - Redis is still used directly in some backend packages outside `api/shared/cache`.
-- `api/shared/module` still exposes concrete runtime dependencies and Ent/bootstrap hooks; it is thinner now because discovery/registry/circuit breaker ownership moved into `framework/runtime`, but the remaining app-specific bootstrap logic still needs separation.
 - Built-in module startup still depends on API-owned composition entrypoints for coexistence-mode boot, so module process startup is not fully framework-owned yet.
 - Medium, high, and very-high complexity built-ins still depend on API-owned RBAC, pubsub, storage, Ent schema, and search/custom-field helpers that have not yet been extracted into stable framework contracts.
 - Observability still relies on API-provided RBAC permission bridging for auth enforcement, which is acceptable for coexistence mode but should become a framework auth contract before broader built-in module migration.
 - Attribute still uses module-local raw SQL inside `framework/modules/attribute/repository` because the shared Ent schema is not yet separable from broader application entities; that is acceptable for the current DB boundary, but it should eventually be replaced by a framework-owned persistence adapter or a module-local extracted data layer.
+- `framework/shared/*` and `framework/internal/legacy/shared/*` now overlap intentionally; the next cleanup pass should collapse that duplication as final runtime ownership is normalized.
 
 ## Validation Performed
 - `cd framework && go test ./...`
+- `cd framework && GOCACHE="$PWD/.gocache" go test ./shared/...`
 - `cd framework && GOCACHE="$PWD/.gocache" go test ./runtime/...`
 - `cd api && GOCACHE="$PWD/.gocache" go test ./...`
+- `cd api && GOCACHE="$PWD/.gocache" go run scripts/module_runner/main.go sync`
 - `cd api && GOCACHE="$PWD/.gocache" go test ./shared/... ./gateway/... ./scripts/module_runner/runner`
 - `cd framework && GOCACHE="$PWD/.gocache" go test ./runtime ./modules/observability/...`
 - `cd api && GOCACHE="$PWD/.gocache" go test ./modules/observability/... ./shared/runtime ./scripts/module_runner/runner ./gateway/...`

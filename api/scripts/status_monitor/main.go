@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/redis"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/redis"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 	"gopkg.in/yaml.v3"
 )
 

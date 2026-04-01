@@ -1,6 +1,6 @@
 package config
 
-import "github.com/khiemnd777/noah_api/shared/config"
+import "github.com/khiemnd777/noah_framework/shared/config"
 
 type StorageConfig struct {
 	PhotoPath string `yaml:"photo_path" mapstructure:"photo_path"`

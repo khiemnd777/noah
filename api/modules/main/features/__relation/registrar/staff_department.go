@@ -2,7 +2,7 @@ package registrar
 
 import (
 	policy "github.com/khiemnd777/noah_api/modules/main/features/__relation/policy"
-	"github.com/khiemnd777/noah_api/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/logger"
 )
 
 func init() {

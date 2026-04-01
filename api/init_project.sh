@@ -11,9 +11,9 @@ if [ -d "vendor" ]; then
   rm -rf vendor
 fi
 
-# Step 1: Generate Ent for shared
+# Step 1: Generate Ent for framework shared
 echo "👉 Generating Ent for shared"
-go run -mod=mod entgo.io/ent/cmd/ent generate ./shared/db/ent/schema --target ./shared/db/ent/generated --feature sql/execquery
+go run -mod=mod entgo.io/ent/cmd/ent generate ../framework/shared/db/ent/schema --target ../framework/shared/db/ent/generated --feature sql/execquery
 
 # Step 1.1: Init database
 echo "👉 Initializing database"

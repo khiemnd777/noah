@@ -3,12 +3,12 @@ package txmanager
 import (
 	"context"
 
-  "github.com/khiemnd777/noah_api/shared/logger"
+  "github.com/khiemnd777/noah_framework/shared/logger"
 
   {{if .WithEnt}}
 	"github.com/khiemnd777/noah_api/modules/{{.module}}/ent/generated"
 	{{else}}
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
 	{{end}}
 )
 

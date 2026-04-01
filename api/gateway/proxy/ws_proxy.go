@@ -9,8 +9,8 @@ import (
 
 	fiberws "github.com/gofiber/websocket/v2"
 	gws "github.com/gorilla/websocket"
-	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 )
 
 func proxyWebSocket(down *fiberws.Conn) {

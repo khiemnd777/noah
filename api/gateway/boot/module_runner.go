@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 )
 
 func IsPortOpen(port int) bool {

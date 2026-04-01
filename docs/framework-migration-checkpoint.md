@@ -74,5 +74,11 @@
 - Folder is now discovered from `framework/modules/folder`; `api/modules/folder` no longer exists.
 - Profile is now discovered from `framework/modules/profile`; `api/modules/profile` no longer exists.
 
+### Final Shared Layer Cutover
+- Migrated the entire `api/shared/**` tree into exported framework ownership at `framework/shared/**`.
+- Repointed all live `api/**` imports, scripts, templates, and Ent generation paths from `api/shared` to `framework/shared`.
+- Removed `api/shared` completely; the backend no longer has an API-owned shared system layer.
+- Preserved `framework/pkg/*` as contract-only packages; Fiber, SQL, Redis, websocket, and Ent concrete types remain outside the public contract surface.
+
 ### Remaining Work
-- Final built-in module migration is complete. Remaining cleanup is stabilization-oriented: continue replacing legacy internalized shims in `framework/internal/legacy/shared/*` with framework-native contracts and runtime helpers where useful, without reintroducing `api/modules/*` ownership.
+- Final built-in module migration is complete. Remaining cleanup is stabilization-oriented: continue reducing duplication between `framework/shared/*` and `framework/internal/legacy/shared/*`, then complete final runtime ownership cleanup without reintroducing `api/modules/*` or `api/shared/*` ownership.

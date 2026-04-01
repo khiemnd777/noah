@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )
 

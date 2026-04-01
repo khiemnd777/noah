@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/gen"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/gen"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 )
 
 func main() {

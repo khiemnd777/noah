@@ -6,9 +6,9 @@ import (
 	"os"
 
 	gateway "github.com/khiemnd777/noah_api/gateway/runtime"
-	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/logger"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 	frameworkapp "github.com/khiemnd777/noah_framework/pkg/app"
 	frameworkruntime "github.com/khiemnd777/noah_framework/runtime"
 )

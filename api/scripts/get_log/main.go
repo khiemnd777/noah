@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 )
 
 func main() {

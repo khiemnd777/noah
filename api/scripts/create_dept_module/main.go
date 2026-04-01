@@ -66,13 +66,13 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	model "github.com/khiemnd777/noah_api/modules/main/features/__model"
 	relation "github.com/khiemnd777/noah_api/modules/main/features/__relation/policy"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated/{{moduleSnake}}"
-	dbutils "github.com/khiemnd777/noah_api/shared/db/utils"
-	"github.com/khiemnd777/noah_api/shared/mapper"
-	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
-	"github.com/khiemnd777/noah_api/shared/module"
-	"github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated/{{moduleSnake}}"
+	dbutils "github.com/khiemnd777/noah_framework/shared/db/utils"
+	"github.com/khiemnd777/noah_framework/shared/mapper"
+	"github.com/khiemnd777/noah_framework/shared/metadata/customfields"
+	"github.com/khiemnd777/noah_framework/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type {{Module}}Repository interface {
@@ -279,15 +279,15 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	model "github.com/khiemnd777/noah_api/modules/main/features/__model"
 	"github.com/khiemnd777/noah_api/modules/main/features/{{moduleSnake}}/repository"
-	"github.com/khiemnd777/noah_api/shared/cache"
-	dbutils "github.com/khiemnd777/noah_api/shared/db/utils"
-	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
-	"github.com/khiemnd777/noah_api/shared/module"
-	searchmodel "github.com/khiemnd777/noah_api/shared/modules/search/model"
-	"github.com/khiemnd777/noah_api/shared/pubsub"
-	searchutils "github.com/khiemnd777/noah_api/shared/search"
-	"github.com/khiemnd777/noah_api/shared/utils"
-	"github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/cache"
+	dbutils "github.com/khiemnd777/noah_framework/shared/db/utils"
+	"github.com/khiemnd777/noah_framework/shared/metadata/customfields"
+	"github.com/khiemnd777/noah_framework/shared/module"
+	searchmodel "github.com/khiemnd777/noah_framework/shared/modules/search/model"
+	"github.com/khiemnd777/noah_framework/shared/pubsub"
+	searchutils "github.com/khiemnd777/noah_framework/shared/search"
+	"github.com/khiemnd777/noah_framework/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type {{Module}}Service interface {
@@ -495,14 +495,14 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/config"
 	model "github.com/khiemnd777/noah_api/modules/main/features/__model"
 	"github.com/khiemnd777/noah_api/modules/main/features/%[1]s/service"
-	"github.com/khiemnd777/noah_api/shared/app"
-	"github.com/khiemnd777/noah_api/shared/app/client_error"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	dbutils "github.com/khiemnd777/noah_api/shared/db/utils"
-	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
-	"github.com/khiemnd777/noah_api/shared/module"
-	"github.com/khiemnd777/noah_api/shared/utils"
-	"github.com/khiemnd777/noah_api/shared/utils/table"
+	"github.com/khiemnd777/noah_framework/shared/app"
+	"github.com/khiemnd777/noah_framework/shared/app/client_error"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	dbutils "github.com/khiemnd777/noah_framework/shared/db/utils"
+	"github.com/khiemnd777/noah_framework/shared/middleware/rbac"
+	"github.com/khiemnd777/noah_framework/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/utils/table"
 )
 
 type %[2]sHandler struct {
@@ -639,9 +639,9 @@ import (
 	"github.com/khiemnd777/noah_api/modules/main/features/%[1]s/repository"
 	"github.com/khiemnd777/noah_api/modules/main/features/%[1]s/service"
 	"github.com/khiemnd777/noah_api/modules/main/registry"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/metadata/customfields"
-	"github.com/khiemnd777/noah_api/shared/module"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/metadata/customfields"
+	"github.com/khiemnd777/noah_framework/shared/module"
 )
 
 type feature struct{}

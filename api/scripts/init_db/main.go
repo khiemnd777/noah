@@ -7,12 +7,12 @@ import (
 
 	entsql "entgo.io/ent/dialect/sql"
 
-	"github.com/khiemnd777/noah_api/shared/config"
-	"github.com/khiemnd777/noah_api/shared/db"
-	"github.com/khiemnd777/noah_api/shared/db/ent"
-	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
-	"github.com/khiemnd777/noah_api/shared/gen"
-	"github.com/khiemnd777/noah_api/shared/utils"
+	"github.com/khiemnd777/noah_framework/shared/config"
+	"github.com/khiemnd777/noah_framework/shared/db"
+	"github.com/khiemnd777/noah_framework/shared/db/ent"
+	"github.com/khiemnd777/noah_framework/shared/db/ent/generated"
+	"github.com/khiemnd777/noah_framework/shared/gen"
+	"github.com/khiemnd777/noah_framework/shared/utils"
 	_ "github.com/lib/pq"
 )
 

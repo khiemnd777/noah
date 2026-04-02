@@ -1,7 +1,9 @@
+name: ${APP_NAME}
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: noah_api_postgres
+    container_name: ${APP_NAME}_postgres
     environment:
       POSTGRES_DB: ${PG_DBNAME}
       POSTGRES_USER: ${PG_USER}
@@ -18,7 +20,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: noah_api_redis
+    container_name: ${APP_NAME}_redis
     command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -34,7 +36,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: noah_api
+    container_name: ${APP_NAME}_api
     env_file:
       - .env
     environment:

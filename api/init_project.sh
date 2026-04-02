@@ -1,7 +1,44 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 export GOCACHE="${PWD}/.gocache"
+export GOTOOLCHAIN="${GOTOOLCHAIN:-auto}"
+
+go_mod_sync() {
+  local attempt
+  local max_attempts=5
+  local output
+  local -a missing_packages=()
+
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    echo "👉 Running go mod tidy (attempt ${attempt}/${max_attempts})"
+
+    if output=$(go mod tidy 2>&1); then
+      [ -n "$output" ] && echo "$output"
+      echo "👉 Running go mod vendor"
+      go mod vendor
+      return 0
+    fi
+
+    echo "$output"
+
+    mapfile -t missing_packages < <(printf '%s\n' "$output" | sed -n 's/.*no required module provides package \([^;]*\);.*/\1/p' | sort -u)
+
+    if [ ${#missing_packages[@]} -eq 0 ]; then
+      echo "❌ go mod tidy failed with a non-recoverable error."
+      return 1
+    fi
+
+    echo "⚙️ Auto-installing missing Go packages..."
+    for pkg in "${missing_packages[@]}"; do
+      echo "   - go get ${pkg}"
+      go get "${pkg}"
+    done
+  done
+
+  echo "❌ go mod tidy failed after ${max_attempts} attempts."
+  return 1
+}
 
 echo "🚀 Initializing project..."
 
@@ -33,11 +70,7 @@ for schema_dir in $(find modules -type d -path "*/ent/schema"); do
 done
 
 # Step 3: Tidy & Vendor
-echo "👉 Running go mod tidy"
-go mod tidy
-
-echo "👉 Running go mod vendor"
-go mod vendor
+go_mod_sync
 
 # Step 4: Init roles
 echo "👉 Initializing roles"

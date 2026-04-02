@@ -1,29 +1,28 @@
-# scripts/create_module/templates/config.yaml.tmpl
 server:
-  host: "127.0.0.1"
-  port: 8078
+  host: "${M_MAIN_HOST}"
+  port: ${M_MAIN_PORT}
   route: "/api/department"
+
+external: true
 
 storage:
   photo_path: "${PHOTO_STORAGE_PATH}"
 
 delivery_qr:
-  session_ttl_minutes: 5
-  client_base_url: "http://127.0.0.1:5173"
-  proof_image_max_size_mb: 5
-
-external: true
+  session_ttl_minutes: ${M_MAIN_DELIVERY_QR_SESSION_TTL_MINUTES}
+  proof_image_max_size_mb: ${M_MAIN_DELIVERY_QR_PROOF_IMAGE_MAX_SIZE_MB}
+  client_base_url: "${M_MAIN_CLIENT_BASE_URL}"
 
 features:
   enabled: []
 
 database:
-  provider: "postgres"
-  automigrate: true
+  provider: "${DB_PROVIDER}"
+  automigrate: ${DB_AUTOMIGRATE}
   postgres:
-    host: "127.0.0.1"
-    port: 5432
-    user: "samson_with_hair"
-    password: "samson_with_hair"
-    name: "noahdb"
-    sslmode: "disable"
+    host: "${PG_HOST}"
+    port: ${PG_PORT}
+    user: "${PG_USER}"
+    password: "${PG_PASSWORD}"
+    name: "${PG_DBNAME}"
+    sslmode: "${PG_SSL}"

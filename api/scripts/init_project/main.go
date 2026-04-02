@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
+
+var missingPackagePattern = regexp.MustCompile(`no required module provides package ([^;]+);`)
 
 func main() {
 	fmt.Println("🚀 Initializing project...")
@@ -46,8 +51,7 @@ func main() {
 	}
 
 	// Step 3: go mod tidy & vendor
-	run("Running go mod tidy", "go", "mod", "tidy")
-	run("Running go mod vendor", "go", "mod", "vendor")
+	runGoModSync()
 
 	// // Step 4: Init roles
 	// run("Initializing roles", "go", "run", "./scripts/init_roles")
@@ -63,11 +67,74 @@ func run(title string, name string, args ...string) {
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	cmd.Env = withDefaultGoToolchain(os.Environ())
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "❌ Failed: %s %v\n", name, args)
 		os.Exit(1)
 	}
+}
+
+func runGoModSync() {
+	const maxAttempts = 5
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		fmt.Printf("👉 Running go mod tidy (attempt %d/%d)\n", attempt, maxAttempts)
+
+		output, err := runCapture("go", "mod", "tidy")
+		if err == nil {
+			if strings.TrimSpace(output) != "" {
+				fmt.Print(output)
+			}
+			run("Running go mod vendor", "go", "mod", "vendor")
+			return
+		}
+
+		fmt.Print(output)
+
+		matches := missingPackagePattern.FindAllStringSubmatch(output, -1)
+		if len(matches) == 0 {
+			fmt.Fprintln(os.Stderr, "❌ go mod tidy failed with a non-recoverable error.")
+			os.Exit(1)
+		}
+
+		seen := make(map[string]struct{})
+		fmt.Println("⚙️ Auto-installing missing Go packages...")
+		for _, match := range matches {
+			pkg := strings.TrimSpace(match[1])
+			if pkg == "" {
+				continue
+			}
+			if _, ok := seen[pkg]; ok {
+				continue
+			}
+			seen[pkg] = struct{}{}
+			run(fmt.Sprintf("go get %s", pkg), "go", "get", pkg)
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "❌ go mod tidy failed after %d attempts.\n", maxAttempts)
+	os.Exit(1)
+}
+
+func runCapture(name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	cmd.Env = withDefaultGoToolchain(os.Environ())
+
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+
+	err := cmd.Run()
+	return buf.String(), err
+}
+
+func withDefaultGoToolchain(env []string) []string {
+	for _, item := range env {
+		if strings.HasPrefix(item, "GOTOOLCHAIN=") {
+			return env
+		}
+	}
+	return append(env, "GOTOOLCHAIN=auto")
 }
 
 func deleteFolder(folder string) {

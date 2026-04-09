@@ -14,6 +14,19 @@ const (
 	observabilityPermissionValue = "system_log.read"
 )
 
+var adminPermissions = []struct {
+	Name  string
+	Value string
+}{
+	{Name: observabilityPermissionName, Value: observabilityPermissionValue},
+	{Name: "Languages View", Value: "languages.view"},
+	{Name: "Languages Create", Value: "languages.create"},
+	{Name: "Languages Update", Value: "languages.update"},
+	{Name: "Languages Delete", Value: "languages.delete"},
+	{Name: "Languages Import", Value: "languages.import"},
+	{Name: "Languages Export", Value: "languages.export"},
+}
+
 type roleSeed struct {
 	RoleName    string
 	DisplayName string
@@ -48,18 +61,19 @@ func EnsureBaseRolesAndPermissions(dbCfg config.DatabaseConfig) error {
 		}
 	}
 
-	permID, err := ensurePermission(ctx, db, observabilityPermissionName, observabilityPermissionValue)
-	if err != nil {
-		return fmt.Errorf("ensure permission %q failed: %w", observabilityPermissionValue, err)
-	}
-
 	adminRoleID, err := getRoleIDByName(ctx, db, "admin")
 	if err != nil {
 		return fmt.Errorf("resolve admin role failed: %w", err)
 	}
 
-	if err := attachPermission(ctx, db, adminRoleID, permID); err != nil {
-		return fmt.Errorf("attach permission %q failed: %w", observabilityPermissionValue, err)
+	for _, perm := range adminPermissions {
+		permID, err := ensurePermission(ctx, db, perm.Name, perm.Value)
+		if err != nil {
+			return fmt.Errorf("ensure permission %q failed: %w", perm.Value, err)
+		}
+		if err := attachPermission(ctx, db, adminRoleID, permID); err != nil {
+			return fmt.Errorf("attach permission %q failed: %w", perm.Value, err)
+		}
 	}
 
 	return nil

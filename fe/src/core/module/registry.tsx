@@ -6,6 +6,8 @@ import type {
   SlotConfig,
   SlotName,
 } from "@core/module/types";
+import { getLocalizedSortText } from "@core/i18n/localized-text";
+import type { LocalizedText } from "@core/i18n/localized-text";
 import { on } from "@core/module/event-bus";
 import { RouteMetaProvider, type RouteMeta } from "@core/module/route-meta";
 import React from "react";
@@ -83,24 +85,26 @@ export function unregisterModule(id: string) {
 
 /** ===== Helpers ===== */
 
-function sortByPriority<T extends { priority?: number; label?: string }>(items: T[]) {
+function sortByPriority<T extends { priority?: number; label?: LocalizedText }>(items: T[]) {
   return [...items].sort((a, b) => {
     const pa = a.priority ?? 0;
     const pb = b.priority ?? 0;
     if (pa !== pb) return pb - pa;
-    return (a.label ?? "").localeCompare(b.label ?? "");
+    const left = getLocalizedSortText(a.label);
+    const right = getLocalizedSortText(b.label);
+    return left.localeCompare(right);
   });
 }
 
 type AnyComponent =
-  | React.ComponentType<any>
-  | React.LazyExoticComponent<React.ComponentType<any>>;
+  | React.ComponentType<object>
+  | React.LazyExoticComponent<React.ComponentType<object>>;
 
 function toElement(input?: React.ReactNode | AnyComponent) {
   if (!input) return <GeneralPage />;
   return React.isValidElement(input)
     ? input
-    : React.createElement(input as React.ComponentType<any>);
+    : React.createElement(input as React.ComponentType<object>);
 }
 
 export function withMeta(
@@ -127,6 +131,7 @@ function flattenRoutes(nodes: RouteNode[]): RouteConfig[] {
         title: n.title,
         subtitle: n.subtitle,
         path: n.path,
+        extra: n.extra,
       };
 
       out.push({

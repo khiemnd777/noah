@@ -1,26 +1,32 @@
 import type { FieldDef } from "@core/form/types";
 import type { FormSchema } from "@core/form/form.types";
 import { uploadImages } from "@core/form/image-upload-utils";
+import { l } from "@root/core/i18n/localized-text";
 import { mapper } from "@core/mapper/auto-mapper";
 import type { StaffModel } from "@features/staff/model/staff.model";
 import { create, existsEmail, existsPhone, id, update } from "@features/staff/api/staff.api";
 import { reloadTable } from "@core/table/table-reload";
 import { openFormDialog } from "@core/form/form-dialog.service";
 import { fetchRolesByUserId, search as searchRoles } from "@root/features/rbac/api/rbac.api";
+import { useI18nStore } from "@store/i18n-store";
 
 type Options = {
   withPassword: boolean;
   passwordRequired?: boolean;
 };
 
+function translate(key: string, fallback?: string): string {
+  return useI18nStore.getState().resources[key] ?? fallback ?? key;
+}
+
 function passwordField(opts: Options): FieldDef {
   return {
     name: "password",
-    label: "Password",
+    label: l("admin.staff.form.fields.password.label"),
     kind: "password",
     rules: {
       ...(opts.withPassword && opts.passwordRequired ? {
-        required: "Yêu cầu nhập mật khẩu",
+        required: translate("admin.staff.validation.password_required"),
       } : {}),
       minLength: 6,
       maxLength: 128
@@ -32,39 +38,39 @@ function commonFields(): FieldDef[] {
   return [
     {
       name: "name",
-      label: "Tên hiển thị",
+      label: l("admin.staff.form.fields.name.label"),
       kind: "text",
-      rules: { required: "Yêu cầu nhập tên hiển thị", maxLength: 50 },
+      rules: { required: translate("admin.staff.validation.name_required"), maxLength: 50 },
     },
     {
       name: "email",
-      label: "Email",
+      label: l("admin.staff.form.fields.email.label"),
       kind: "email",
       rules: {
-        required: "Yêu cầu nhập địa chỉ email",
+        required: translate("admin.staff.validation.email_required"),
         maxLength: 300,
         async: async (val: string | null, { id }) => {
           if (!val) return null;
           const existed = await existsEmail({ id, email: val });
-          return existed ? `Email ${val} đã tồn tại, vui lòng chọn email khác.` : null;
+          return existed ? translate("admin.staff.validation.email_exists").replace("{value}", val) : null;
         },
       },
     },
     {
       name: "phone",
-      label: "Số điện thoại",
+      label: l("admin.staff.form.fields.phone.label"),
       kind: "text",
-      placeholder: "+84xxxxxxxxx",
+      placeholder: l("admin.staff.form.fields.phone.placeholder"),
       rules: {
         async: async (val: string | null, { id }) => {
           if (!val) return null;
           const ok = /^\+?\d{8,15}$/.test(val);
-          if (!ok) return "Sai định dạng số điện thoại";
+          if (!ok) return translate("admin.staff.validation.phone_invalid");
           const existed = await existsPhone({ id, phone: val });
-          return existed ? `Số ${val} đã tồn tại, vui lòng chọn số khác.` : null;
+          return existed ? translate("admin.staff.validation.phone_exists").replace("{value}", val) : null;
         },
       },
-      helperText: "Có thể nhập +84 hoặc không.",
+      helperText: l("admin.staff.form.fields.phone.helper_text"),
     },
     {
       name: "",
@@ -77,26 +83,26 @@ function commonFields(): FieldDef[] {
     },
     {
       name: "avatar",
-      label: "Ảnh đại diện",
+      label: l("admin.staff.form.fields.avatar.label"),
       kind: "imageupload",
       accept: "image/*",
       maxFiles: 1,
       multipleFiles: false,
-      helperText: "PNG/JPG ≤ 2MB. Khuyến nghị hình vuông.",
+      helperText: l("admin.staff.form.fields.avatar.helper_text"),
       uploader: uploadImages,
     },
     {
       name: "active",
-      label: "Kích hoạt",
+      label: l("admin.staff.form.fields.active.label"),
       kind: "switch",
       defaultValue: true,
     },
     // ---- Roles ----
     {
       name: "roleIds",
-      label: "Vai trò",
+      label: l("admin.staff.form.fields.role_ids.label"),
       kind: "searchlist",
-      placeholder: "Tìm vai trò phù hợp cho nhân sự…",
+      placeholder: l("admin.staff.form.fields.role_ids.placeholder"),
       fullWidth: true,
 
       getOptionLabel: (d: any) => d?.displayName,
@@ -160,13 +166,17 @@ export function buildStaffSchemaShared(opts: Options): FormSchema {
     },
     toasts: {
       saved: ({ mode, values }) =>
-        mode === "create"
-          ? `Tạo nhân sự "${values?.name ?? ""}" thành công!`
-          : `Cập nhật nhân sự "${values?.name ?? ""}" thành công!`,
+        translate(
+          mode === "create"
+            ? "admin.staff.messages.create_success"
+            : "admin.staff.messages.update_success"
+        ).replace("{name}", String(values?.name ?? "")),
       failed: ({ mode, values }) =>
-        mode === "create"
-          ? `Tạo nhân sự "${values?.name ?? ""}" thất bại, xin thử lại!`
-          : `Cập nhật nhân sự "${values?.name ?? ""}" thất bại, xin thử lại!`,
+        translate(
+          mode === "create"
+            ? "admin.staff.messages.create_failed"
+            : "admin.staff.messages.update_failed"
+        ).replace("{name}", String(values?.name ?? "")),
     },
     async initialResolver(data: any) {
       if (data) {

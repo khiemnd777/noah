@@ -1,17 +1,18 @@
 import { registerTable } from "@core/table/table-registry";
 import { createTableSchema, type ColumnDef, type FetchTableOpts } from "@core/table/table.types";
 import { openFormDialog } from "@core/form/form-dialog.service";
+import { l } from "@root/core/i18n/localized-text";
 import type { StaffModel } from "@features/staff/model/staff.model";
 import { table, unlink } from "@features/staff/api/staff.api";
 import { reloadTable } from "@core/table/table-reload";
 import { navigate } from "@root/core/navigation/navigate";
 
 const columns: ColumnDef<StaffModel>[] = [
-  { key: "avatar", header: "Avatar", type: "image", shape: "circle", width: 80 },
-  { key: "name", header: "Tên Nhân Sự", sortable: true, labelField: true, width: 180 },
+  { key: "avatar", header: l("admin.staff.table.columns.avatar"), type: "image", shape: "circle", width: 80 },
+  { key: "name", header: l("admin.staff.table.columns.name"), sortable: true, labelField: true, width: 180 },
   // { key: "sectionNames", header: "Bộ Phận", width: 140, type: "chips" },
-  { key: "email", header: "Email", sortable: true, width: 260 },
-  { key: "phone", header: "Số Điện Thoại", width: 180 },
+  { key: "email", header: l("admin.staff.table.columns.email"), sortable: true, width: 260 },
+  { key: "phone", header: l("admin.staff.table.columns.phone"), width: 180 },
   {
     key: "",
     type: "metadata",
@@ -20,7 +21,7 @@ const columns: ColumnDef<StaffModel>[] = [
       mode: "whole",
     }
   },
-  { key: "active", header: "Kích hoạt?", sortable: true, type: "boolean", },
+  { key: "active", header: l("admin.staff.table.columns.active"), sortable: true, type: "boolean", },
   // {
   //   key: "qrCode", header: "Mã QR", type: "qr", width: 56,
   //   qr: {

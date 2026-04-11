@@ -16,6 +16,7 @@ import AddCircleOutlineRounded from "@mui/icons-material/AddCircleOutlineRounded
 import DragIndicatorRounded from "@mui/icons-material/DragIndicatorRounded";
 import DeleteRounded from "@mui/icons-material/DeleteRounded";
 import type { FormContext } from "./types";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 type Size = "small" | "medium";
 
@@ -96,6 +97,7 @@ const normalizeIds = (ids: Array<string | number>) => ids.map((x) => String(x));
 const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 export function SearchListField<T>(props: SearchListFieldProps<T>) {
+  const { t } = useI18n();
   const {
     label,
     placeholder,
@@ -528,7 +530,7 @@ export function SearchListField<T>(props: SearchListFieldProps<T>) {
           />
 
           {onOpenCreate != null ? (
-            <Tooltip title="Tạo mới">
+            <Tooltip title={t("admin.general.create_button")}>
               <span>
                 <IconButton
                   color="primary"
@@ -556,7 +558,9 @@ export function SearchListField<T>(props: SearchListFieldProps<T>) {
         >
           {items.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              {`Chưa có ${label?.toLocaleLowerCase()} nào.`}
+              {label
+                ? t("admin.general.empty_named").replace("{label}", label.toLocaleLowerCase())
+                : t("admin.general.no_data")}
             </Typography>
           ) : (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
@@ -612,7 +616,7 @@ export function SearchListField<T>(props: SearchListFieldProps<T>) {
                           cursor: disabled ? "default" : "grabbing",
                         },
                       }}
-                      aria-label="Kéo để sắp xếp"
+                      aria-label={t("admin.general.drag_to_sort_aria")}
                     >
                       <DragIndicatorRounded fontSize="small" />
                     </Box>
@@ -621,14 +625,23 @@ export function SearchListField<T>(props: SearchListFieldProps<T>) {
                       {renderItem ? renderItem(item, idx) : defaultItemContent(item)}
                     </Box>
 
-                    <Tooltip title={disabledDel ? "Không thể xoá" : "Xoá"}>
+                    <Tooltip
+                      title={
+                        disabledDel
+                          ? t("admin.general.delete_disabled_tooltip")
+                          : t("admin.general.delete_button")
+                      }
+                    >
                       <span>
                         <IconButton
                           size="small"
                           color="error"
                           disabled={disabledDel}
                           onClick={() => !disabledDel && removeItem(item)}
-                          aria-label={`Xoá ${getOptionLabel(item, options)}`}
+                          aria-label={t("admin.general.delete_item_aria").replace(
+                            "{label}",
+                            getOptionLabel(item, options)
+                          )}
                         >
                           <DeleteRounded fontSize="small" />
                         </IconButton>

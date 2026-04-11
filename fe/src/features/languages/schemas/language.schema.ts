@@ -3,52 +3,58 @@ import type { FormSchema } from "@core/form/form.types";
 import { registerFormDialog } from "@core/form/form-dialog.registry";
 import { registerForm } from "@core/form/form-registry";
 import { reloadTable } from "@core/table/table-reload";
+import { l } from "@root/core/i18n/localized-text";
+import { useI18nStore } from "@store/i18n-store";
 import { createLanguage, getLanguageById, updateLanguage } from "@features/languages/api/language.api";
 import type { LanguageModel } from "@features/languages/model/language.model";
+
+function translate(key: string, fallback?: string): string {
+  return useI18nStore.getState().resources[key] ?? fallback ?? key;
+}
 
 function buildLanguageFields(): FieldDef[] {
   return [
     {
       name: "code",
-      label: "Mã ngôn ngữ",
+      label: l("admin.languages.form.fields.code.label"),
       kind: "text",
-      placeholder: "vi-VN",
+      placeholder: l("admin.languages.form.fields.code.placeholder"),
       rules: {
-        required: "Yêu cầu nhập mã ngôn ngữ",
+        required: translate("admin.languages.validation.code_required"),
         maxLength: 32,
         pattern: {
           regex: /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)?$/,
-          message: "Mã ngôn ngữ chỉ gồm chữ, số, gạch ngang, gạch dưới hoặc dấu chấm.",
+          message: translate("admin.languages.validation.code_invalid"),
         },
       },
     },
     {
       name: "name",
-      label: "Tên hiển thị",
+      label: l("admin.languages.form.fields.name.label"),
       kind: "text",
       rules: {
-        required: "Yêu cầu nhập tên hiển thị",
+        required: translate("admin.languages.validation.name_required"),
         maxLength: 120,
       },
     },
     {
       name: "nativeName",
-      label: "Tên bản địa",
+      label: l("admin.languages.form.fields.native_name.label"),
       kind: "text",
       rules: {
-        required: "Yêu cầu nhập tên bản địa",
+        required: translate("admin.languages.validation.native_name_required"),
         maxLength: 120,
       },
     },
     {
       name: "isDefault",
-      label: "Ngôn ngữ mặc định",
+      label: l("admin.languages.form.fields.is_default.label"),
       kind: "switch",
       defaultValue: false,
     },
     {
       name: "active",
-      label: "Kích hoạt",
+      label: l("admin.languages.form.fields.active.label"),
       kind: "switch",
       defaultValue: true,
     },
@@ -84,13 +90,17 @@ function buildLanguageBaseSchema(): FormSchema {
     },
     toasts: {
       saved: ({ mode, values }) =>
-        mode === "create"
-          ? `Tạo ngôn ngữ "${values?.name ?? ""}" thành công!`
-          : `Cập nhật ngôn ngữ "${values?.name ?? ""}" thành công!`,
+        translate(
+          mode === "create"
+            ? "admin.languages.messages.create_success"
+            : "admin.languages.messages.update_success"
+        ).replace("{name}", String(values?.name ?? "")),
       failed: ({ mode, values }) =>
-        mode === "create"
-          ? `Tạo ngôn ngữ "${values?.name ?? ""}" thất bại, xin thử lại!`
-          : `Cập nhật ngôn ngữ "${values?.name ?? ""}" thất bại, xin thử lại!`,
+        translate(
+          mode === "create"
+            ? "admin.languages.messages.create_failed"
+            : "admin.languages.messages.update_failed"
+        ).replace("{name}", String(values?.name ?? "")),
     },
     async afterSaved() {
       reloadTable("languages");
@@ -107,9 +117,15 @@ export function buildLanguageDetailSchema() {
 }
 
 registerFormDialog("language", buildLanguageDialogSchema, {
-  title: { create: "Thêm ngôn ngữ", update: "Cập nhật ngôn ngữ" },
-  confirmText: { create: "Thêm", update: "Lưu" },
-  cancelText: "Thoát",
+  title: {
+    create: l("admin.languages.dialog.create_title"),
+    update: l("admin.languages.dialog.update_title"),
+  },
+  confirmText: {
+    create: l("admin.general.create_button"),
+    update: l("admin.general.save_button"),
+  },
+  cancelText: l("admin.general.cancel_button"),
   maxWidth: "md",
 });
 

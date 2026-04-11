@@ -77,13 +77,14 @@ func main() {
 	}
 
 	sqlDB := dbClient.GetSQL() // Returns *sql.DB if Postgres, but nil Mongo
-	_, entErr := ent.EntBootstrap(dbCfg.Provider, sqlDB, func(drv *entsql.Driver) any {
+	entClientAny, entErr := ent.EntBootstrap(dbCfg.Provider, sqlDB, func(drv *entsql.Driver) any {
 		return generated.NewClient(generated.Driver(drv))
 	}, dbCfg.AutoMigrate)
 	if entErr != nil {
 		log.Fatalf("❌ Failed to init Ent client: %v", entErr)
 		os.Exit(1)
 	}
+	entClient := entClientAny.(*generated.Client)
 
 	if err := bootstrap.ApplySQLMigrations(sqlDB); err != nil {
 		os.Exit(1)
@@ -91,6 +92,10 @@ func main() {
 
 	if err := bootstrap.EnsureBaseRolesAndPermissions(dbCfg); err != nil {
 		log.Fatalf("❌ Failed to seed base roles: %v", err)
+	}
+
+	if err := bootstrap.SyncLanguageXMLOnBoot(entClient); err != nil {
+		log.Fatalf("❌ Failed to sync language xml: %v", err)
 	}
 
 	circuitbreaker.Init()

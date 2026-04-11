@@ -2,6 +2,7 @@ import * as React from "react";
 import { Box, Button, Stack, Typography } from "@mui/material";
 import AddCircleOutlineRounded from "@mui/icons-material/AddCircleOutlineRounded";
 import { ConfirmDialog } from "@shared/components/dialog/confirm-dialog";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 export type RenderItemProps<T> = {
   item: T;
@@ -33,10 +34,13 @@ export function GenericItemList<T>({
   onAdd,
   onRemove,
   confirmRemove,
-  addLabel = "Thêm",
-  emptyLabel = "Chưa có dữ liệu.",
+  addLabel,
+  emptyLabel,
 }: GenericItemListProps<T>) {
+  const { t } = useI18n();
   const items = value;
+  const resolvedAddLabel = addLabel ?? t("admin.general.add_button");
+  const resolvedEmptyLabel = emptyLabel ?? t("admin.general.no_data");
 
   const [confirmItem, setConfirmItem] =
     React.useState<{ item: T; index: number } | null>(null);
@@ -101,7 +105,7 @@ export function GenericItemList<T>({
         {items.length === 0 ? (
           <Box sx={(t) => ({ border: `1px dashed ${t.palette.divider}`, p: 2, borderRadius: 1 })}>
             <Typography variant="body2" color="text.secondary">
-              {emptyLabel}
+              {resolvedEmptyLabel}
             </Typography>
           </Box>
         ) : (
@@ -124,17 +128,17 @@ export function GenericItemList<T>({
             startIcon={<AddCircleOutlineRounded />}
             onClick={handleAdd}
           >
-            {addLabel}
+            {resolvedAddLabel}
           </Button>
         </Box>
       </Stack>
 
       <ConfirmDialog
         open={Boolean(confirmItem)}
-        title="Xóa?"
-        content="Bạn có chắc muốn xóa?"
-        confirmText="Xóa"
-        cancelText="Hủy"
+        title={t("admin.general.delete_confirm_title")}
+        content={t("admin.general.delete_confirm_content")}
+        confirmText={t("admin.general.delete_button")}
+        cancelText={t("admin.general.cancel_button")}
         onClose={() => {
           confirmResolverRef.current?.(false);
           confirmResolverRef.current = null;

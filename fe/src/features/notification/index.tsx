@@ -1,4 +1,5 @@
 import type { ModuleDescriptor } from "@root/core/module/types";
+import { l } from "@root/core/i18n/localized-text";
 import { registerModule } from "@root/core/module/registry";
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { NotificationChip } from "./components/notification-chip.component";
@@ -8,8 +9,8 @@ const mod: ModuleDescriptor = {
   routes: [
     {
       key: "notification",
-      label: "Thông báo",
-      title: "Thông báo",
+      label: l("admin.notification.page_title"),
+      title: l("admin.notification.page_title"),
       path: "/notification",
       icon: <NotificationsIcon />,
       chip: <NotificationChip />,

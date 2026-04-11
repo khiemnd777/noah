@@ -2,29 +2,35 @@ import type { FieldDef } from "@core/form/types";
 import type { FormSchema } from "@core/form/form.types";
 import { mapper } from "@core/mapper/auto-mapper";
 import { registerFormDialog } from "@core/form/form-dialog.registry";
+import { l } from "@root/core/i18n/localized-text";
 import { createRole, fetchRoleByID, updateRole } from "@features/rbac/api/rbac.api";
 import type { RoleModel } from "@features/rbac/model/role.model";
 import { reloadTable } from "@core/table/table-reload";
 import { EV_RBAC_MATRIX_INVALIDATE } from "@features/rbac/model/rbac.events";
 import { invalidate } from "@core/module/event-invalidation";
+import { useI18nStore } from "@store/i18n-store";
+
+function translate(key: string, fallback?: string): string {
+  return useI18nStore.getState().resources[key] ?? fallback ?? key;
+}
 
 export function buildRoleSchema(): FormSchema {
   const fields: FieldDef[] = [
     {
       name: "displayName",
-      label: "Tên hiển thị",
+      label: l("admin.rbac.roles.form.fields.display_name.label"),
       kind: "text",
       rules: {
-        required: "Yêu cầu nhập tên hiển thị",
+        required: translate("admin.rbac.roles.validation.display_name_required"),
         maxLength: 50,
       },
     },
     {
       name: "roleName",
-      label: "Tên hệ thống",
+      label: l("admin.rbac.roles.form.fields.role_name.label"),
       kind: "text",
       rules: {
-        required: "Yêu cầu nhập tên hệ thống",
+        required: translate("admin.rbac.roles.validation.role_name_required"),
         maxLength: 20,
       },
       // derive: {
@@ -35,7 +41,7 @@ export function buildRoleSchema(): FormSchema {
     },
     {
       name: "brief",
-      label: "Mô tả",
+      label: l("admin.rbac.roles.form.fields.brief.label"),
       kind: "textarea",
       rules: { maxLength: 300 },
     },
@@ -63,13 +69,17 @@ export function buildRoleSchema(): FormSchema {
 
     toasts: {
       saved: ({ mode, values }) =>
-        mode === "create"
-          ? `Tạo vai trò "${values?.displayName ?? ""}" thành công!`
-          : `Cập nhật vai trò "${values?.displayName ?? ""}" thành công!`,
+        translate(
+          mode === "create"
+            ? "admin.rbac.roles.messages.create_success"
+            : "admin.rbac.roles.messages.update_success"
+        ).replace("{name}", String(values?.displayName ?? "")),
       failed: ({ mode, values }) =>
-        mode === "create"
-          ? `Tạo vai trò "${values?.displayName ?? ""}" thất bại, xin thử lại!`
-          : `Cập nhật vai trò "${values?.displayName ?? ""}" thất bại, xin thử lại!`,
+        translate(
+          mode === "create"
+            ? "admin.rbac.roles.messages.create_failed"
+            : "admin.rbac.roles.messages.update_failed"
+        ).replace("{name}", String(values?.displayName ?? "")),
     },
 
     async initialResolver(data: any) {
@@ -93,7 +103,13 @@ export function buildRoleSchema(): FormSchema {
 }
 
 registerFormDialog("role", buildRoleSchema, {
-  title: { create: "Thêm vai trò", update: "Cập nhật vai trò" },
-  confirmText: { create: "Thêm", update: "Lưu" },
-  cancelText: "Thoát",
+  title: {
+    create: l("admin.rbac.roles.dialog.create_title"),
+    update: l("admin.rbac.roles.dialog.update_title"),
+  },
+  confirmText: {
+    create: l("admin.general.create_button"),
+    update: l("admin.general.save_button"),
+  },
+  cancelText: l("admin.general.cancel_button"),
 });

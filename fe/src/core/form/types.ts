@@ -1,3 +1,5 @@
+import type { LocalizedText } from "@root/core/i18n/localized-text";
+
 export type FieldKind =
   | "text"
   | "password"
@@ -117,9 +119,9 @@ export type SearchListHydrateFn = (
 // metadata def
 export type MiniFieldOverride = {
   name: string;
-  label?: string;
-  placeholder?: string;
-  helperText?: string;
+  label?: LocalizedText;
+  placeholder?: LocalizedText;
+  helperText?: LocalizedText;
   rules?: FieldRules;
   showIf?: (values: Record<string, any>, ctx?: FormContext) => boolean;
   disableIf?: (values: Record<string, any>, ctx?: FormContext) => boolean;
@@ -150,13 +152,13 @@ export type MiniFieldOverride = {
 export type FieldDef = {
   name: string;
   altName?: string;
-  label: string;
+  label: LocalizedText;
   kind: FieldKind;
   group?: string;                                                           // default: "general"
-  placeholder?: string;
+  placeholder?: LocalizedText;
   rows?: number;                                                            // for textarea
   defaultValue?: any;
-  helperText?: string;
+  helperText?: LocalizedText;
   fullWidth?: boolean;
   size?: "small" | "medium";
   rules?: FieldRules;
@@ -183,9 +185,9 @@ export type FieldDef = {
   // password
   passwordRules?: PasswordRules;
   // change-password labels
-  currentLabel?: string;  // default: "Mật khẩu hiện tại"
-  newLabel?: string;      // default: "Mật khẩu mới" (hoặc "Mật khẩu" cho new-password)
-  confirmLabel?: string;  // default: "Xác nhận mật khẩu mới" / "Xác nhận mật khẩu"
+  currentLabel?: LocalizedText;  // default: "Mật khẩu hiện tại"
+  newLabel?: LocalizedText;      // default: "Mật khẩu mới" (hoặc "Mật khẩu" cho new-password)
+  confirmLabel?: LocalizedText;  // default: "Xác nhận mật khẩu mới" / "Xác nhận mật khẩu"
 
   // custom
   render?: (ctx: CustomRenderCtx) => React.ReactNode;

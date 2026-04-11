@@ -2,18 +2,21 @@ import AddIcon from "@mui/icons-material/Add";
 import { Button } from "@mui/material";
 import { IfPermission } from "@root/core/auth/if-permission";
 import { openFormDialog } from "@root/core/form/form-dialog.service";
+import { useI18n } from "@root/core/i18n/use-i18n";
 import { registerSlot } from "@root/core/module/registry";
 import { AutoTable } from "@root/core/table/auto-table";
 import { SectionCard } from "@root/shared/components/ui/section-card";
 
 export function LanguageWidget() {
+  const { t } = useI18n();
+
   return (
     <SectionCard
-      title="Ngôn ngữ"
+      title={t("admin.languages.list.section_title")}
       extra={
         <IfPermission permissions={["languages.create"]}>
           <Button variant="outlined" startIcon={<AddIcon />} onClick={() => openFormDialog("language")}>
-            Thêm ngôn ngữ
+            {t("admin.general.create_button")}
           </Button>
         </IfPermission>
       }

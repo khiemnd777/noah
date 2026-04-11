@@ -1,4 +1,5 @@
 import type { ModuleDescriptor } from "@root/core/module/types";
+import { l } from "@root/core/i18n/localized-text";
 import { registerModule } from "@root/core/module/registry";
 import BadgeIcon from '@mui/icons-material/Badge';
 import OneColumnPage from "@root/core/pages/one-column-page";
@@ -9,9 +10,9 @@ const mod: ModuleDescriptor = {
     {
       key: "staff",
       permissions: ["staff.view"],
-      label: "Nhân sự",
-      title: "Nhân sự",
-      subtitle: "Quản lý nhân sự",
+      label: l("admin.staff.page_title"),
+      title: l("admin.staff.page_title"),
+      subtitle: l("admin.staff.page_subtitle"),
       path: "/staff",
       element: <OneColumnPage />,
       icon: <BadgeIcon />,
@@ -21,9 +22,9 @@ const mod: ModuleDescriptor = {
           hidden: true,
           key: "staff-detail",
           permissions: ["staff.view", "staff.update"],
-          label: "Chi tiết nhân sự",
-          title: "Chi tiết Nhân sự",
-          subtitle: "Thay đổi thông tin, mật khẩu, và theo dõi tiến độ gia công.",
+          label: l("admin.staff.detail_title"),
+          title: l("admin.staff.detail_title"),
+          subtitle: l("admin.staff.detail_subtitle"),
           path: "/staff/:staffId",
           icon: <BadgeIcon />,
           element: <OneColumnPage />,

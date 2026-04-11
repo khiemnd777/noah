@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { listMenuItems } from "@core/module/registry";
 import type { MenuItem } from "@core/module/types";
 import { useMenuByAccess } from "@core/auth/use-menu-by-access";
+import { resolveLocalizedText } from "@core/i18n/localized-text";
+import { useI18n } from "@core/i18n/use-i18n";
 
 export type SidebarItem = {
   key: string;
@@ -21,6 +23,7 @@ type Options = {
 
 export function useModuleMenu(opts?: Options): SidebarItem[] {
   const { flattenChildren = false, flattenLabelWithParent = true } = opts ?? {};
+  const { t } = useI18n();
 
   const all = listMenuItems();
   const filtered = useMenuByAccess(all);
@@ -30,16 +33,16 @@ export function useModuleMenu(opts?: Options): SidebarItem[] {
       const pa = a.priority ?? 0;
       const pb = b.priority ?? 0;
       if (pa !== pb) return pb - pa;
-      return (a.label ?? "").localeCompare(b.label ?? "");
+      return resolveLocalizedText(a.label, t).localeCompare(resolveLocalizedText(b.label, t));
     });
-  }, []);
+  }, [t]);
 
   const mapNode = React.useCallback(
     (it: MenuItem, parent?: MenuItem): SidebarItem => {
       const label =
         parent && flattenChildren && flattenLabelWithParent
-          ? `${parent.label} / ${it.label}`
-          : it.label;
+          ? `${resolveLocalizedText(parent.label, t)} / ${resolveLocalizedText(it.label, t)}`
+          : resolveLocalizedText(it.label, t);
 
       const node: SidebarItem = {
         key: parent ? `${parent.key}:${it.key}` : it.key,
@@ -59,7 +62,7 @@ export function useModuleMenu(opts?: Options): SidebarItem[] {
 
       return node;
     },
-    [flattenChildren, flattenLabelWithParent, sortMenu]
+    [flattenChildren, flattenLabelWithParent, sortMenu, t]
   );
 
   const build = React.useCallback(

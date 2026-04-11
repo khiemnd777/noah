@@ -3,6 +3,8 @@ import { Stack } from "@mui/material";
 import { SafeButton } from "@root/shared/components/button/safe-button";
 import type { AutoFormRef } from "@core/form/form.types";
 import { resolveMode } from "@core/form/form-dialog-mode.helper";
+import { resolveLocalizedText } from "@root/core/i18n/localized-text";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 /* Usage:
   import { AutoFormButtons } from "@core/form/auto-form-buttons";
@@ -30,6 +32,7 @@ export function AutoFormButtons({
   justify = "flex-end",
   fallback,
 }: Props) {
+  const { t } = useI18n();
   const [, forceRender] = React.useReducer(x => x + 1, 0);
 
   React.useEffect(() => {
@@ -73,7 +76,7 @@ export function AutoFormButtons({
             startIcon={btn.icon}
             onClick={() => form.runSubmitButton?.(btn, mode)}
           >
-            {btn.label ?? btn.name}
+            {resolveLocalizedText(btn.label ?? btn.name, t)}
           </SafeButton>
         );
       })}

@@ -3,8 +3,10 @@ import { useColorScheme } from "@mui/material/styles";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import SettingsBrightnessRoundedIcon from "@mui/icons-material/SettingsBrightnessRounded";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 export function ThemeToggle() {
+  const { t } = useI18n();
   const { mode, setMode, systemMode } = useColorScheme();
   const effective = mode === "system" ? systemMode : mode; // light | dark
 
@@ -20,8 +22,11 @@ export function ThemeToggle() {
       <SettingsBrightnessRoundedIcon fontSize="small" />
     );
 
+  const currentModeLabel = t(`admin.settings.ui.theme.mode.${mode}`);
+  const nextModeLabel = t(`admin.settings.ui.theme.mode.${next}`);
+
   return (
-    <Tooltip title={`Theme: ${mode}. Click to switch → ${next}`}>
+    <Tooltip title={t("admin.settings.ui.theme.tooltip").replace("{current}", currentModeLabel).replace("{next}", nextModeLabel)}>
       <Button
         size="small"
         variant="outlined"
@@ -29,7 +34,7 @@ export function ThemeToggle() {
         startIcon={icon}
         sx={{ textTransform: "capitalize" }}
       >
-        {mode}
+        {currentModeLabel}
       </Button>
     </Tooltip>
   );

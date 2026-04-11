@@ -6,6 +6,7 @@ import {
   Box,
   Stack,
 } from "@mui/material";
+import { useI18n } from "@root/core/i18n/use-i18n";
 import type { SearchModel } from "@core/search/search.model";
 import { getSearchRenderer } from "@core/search/search-renderer";
 import { search } from "@core/search/search.api";
@@ -21,7 +22,7 @@ type SearchBoxProps = {
 };
 
 export default function SearchBox({
-  placeholder = "Tìm kiếm…",
+  placeholder,
   autoFocus,
   minChars = 2,
   debounceMs = 300,
@@ -29,6 +30,8 @@ export default function SearchBox({
   fullWidth = true,
   entityType,
 }: SearchBoxProps) {
+  const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t("admin.search.placeholder");
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<SearchModel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -122,7 +125,7 @@ export default function SearchBox({
           {...params}
           autoFocus={autoFocus}
           fullWidth={fullWidth}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           InputProps={{
@@ -138,8 +141,8 @@ export default function SearchBox({
       )}
       noOptionsText={
         query.trim().length < minChars
-          ? `Nhập ít nhất ${minChars} ký tự`
-          : "Không có kết quả"
+          ? t("admin.search.min_chars").replace("{count}", String(minChars))
+          : t("admin.search.no_results")
       }
     />
   );

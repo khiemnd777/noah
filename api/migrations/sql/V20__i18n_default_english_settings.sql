@@ -6,7 +6,19 @@ WITH cleared_defaults AS (
     AND code <> 'en'
     AND is_default = TRUE
 ),
-upserted_language AS (
+updated_language AS (
+  UPDATE languages
+  SET name = 'English',
+      native_name = 'English',
+      is_default = TRUE,
+      active = TRUE,
+      deleted = FALSE,
+      updated_at = NOW()
+  WHERE code = 'en'
+    AND deleted = FALSE
+  RETURNING id
+),
+inserted_language AS (
   INSERT INTO languages (
     code,
     name,
@@ -17,7 +29,7 @@ upserted_language AS (
     created_at,
     updated_at
   )
-  VALUES (
+  SELECT
     'en',
     'English',
     'English',
@@ -26,14 +38,9 @@ upserted_language AS (
     FALSE,
     NOW(),
     NOW()
-  )
-  ON CONFLICT (code, deleted) DO UPDATE
-  SET name = EXCLUDED.name,
-      native_name = EXCLUDED.native_name,
-      is_default = EXCLUDED.is_default,
-      active = EXCLUDED.active,
-      deleted = FALSE,
-      updated_at = NOW()
+  WHERE NOT EXISTS (SELECT 1 FROM updated_language)
   RETURNING id
 )
-SELECT id FROM upserted_language;
+SELECT id FROM updated_language
+UNION ALL
+SELECT id FROM inserted_language;

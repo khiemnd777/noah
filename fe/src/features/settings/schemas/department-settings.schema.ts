@@ -4,53 +4,59 @@ import { uploadImages } from "@root/core/form/image-upload-utils";
 import { mapper } from "@root/core/mapper/auto-mapper";
 import { updateDepartment } from "@features/settings/api/department.api";
 import { registerForm } from "@root/core/form/form-registry";
+import { l } from "@root/core/i18n/localized-text";
 import { useAuthStore } from "@root/store/auth-store";
+import { useI18nStore } from "@store/i18n-store";
+
+function translate(key: string, fallback?: string): string {
+  return useI18nStore.getState().resources[key] ?? fallback ?? key;
+}
 
 export function buildDepartmentSettingsSchema(): FormSchema {
   const fields: FieldDef[] = [
     {
       name: "name",
-      label: "Tên công ty",
+      label: l("admin.settings.department.fields.name.label"),
       kind: "text",
       rules: {
-        required: "Yêu cầu nhập tên",
+        required: translate("admin.settings.department.validation.name_required"),
         minLength: 2,
         maxLength: 120,
       },
     },
     {
       name: "address",
-      label: "Địa chỉ",
+      label: l("admin.settings.department.fields.address.label"),
       kind: "text",
       rules: { maxLength: 300 },
     },
     {
       name: "phoneNumber",
-      label: "Số điện thoại",
+      label: l("admin.settings.department.fields.phone_number.label"),
       kind: "text",
-      placeholder: "+84xxxxxxxxx",
+      placeholder: l("admin.settings.department.fields.phone_number.placeholder"),
       rules: {
         async: async (val: string | null) => {
           if (!val) return null;
           const ok = /^\+?\d{8,15}$/.test(val);
-          return ok ? null : "Invalid phone number";
+          return ok ? null : translate("admin.settings.department.validation.phone_invalid");
         },
       },
-      helperText: "Có thể nhập +84 hoặc không.",
+      helperText: l("admin.settings.department.fields.phone_number.helper_text"),
     },
     {
       name: "logo",
-      label: "Logo",
+      label: l("admin.settings.department.fields.logo.label"),
       kind: "imageupload",
       accept: "image/*",
       maxFiles: 1,
       multipleFiles: false,
-      helperText: "PNG/JPG ≤ 2MB. Khuyến nghị hình vuông.",
+      helperText: l("admin.settings.department.fields.logo.helper_text"),
       uploader: uploadImages,
     },
     {
       name: "active",
-      label: "Kích hoạt",
+      label: l("admin.settings.department.fields.active.label"),
       kind: "switch",
     },
   ];
@@ -71,8 +77,8 @@ export function buildDepartmentSettingsSchema(): FormSchema {
       await useAuthStore.getState().fetchDepartment();
     },
     toasts: {
-      saved: "Lưu thông tin trang thành công!",
-      failed: "Lưu thất bại, xin thử lại!",
+      saved: l("admin.settings.department.messages.save_success"),
+      failed: l("admin.settings.department.messages.save_failed"),
     },
     submit,
     hooks: {

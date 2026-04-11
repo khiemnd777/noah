@@ -12,11 +12,11 @@ export function LanguageWidget() {
 
   return (
     <SectionCard
-      title={t("admin.languages.list.section_title", "Ngôn ngữ")}
+      title={t("admin.languages.list.section_title")}
       extra={
         <IfPermission permissions={["languages.create"]}>
           <Button variant="outlined" startIcon={<AddIcon />} onClick={() => openFormDialog("language")}>
-            {t("admin.languages.actions.create", "Thêm ngôn ngữ")}
+            {t("admin.general.create_button")}
           </Button>
         </IfPermission>
       }

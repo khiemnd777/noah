@@ -1,4 +1,5 @@
 import { openFormDialog } from "@core/form/form-dialog.service";
+import { l } from "@root/core/i18n/localized-text";
 import { navigate } from "@core/navigation/navigate";
 import { reloadTable } from "@core/table/table-reload";
 import { registerTable } from "@core/table/table-registry";
@@ -7,12 +8,12 @@ import { deleteLanguage, listLanguages } from "@features/languages/api/language.
 import type { LanguageModel } from "@features/languages/model/language.model";
 
 const columns: ColumnDef<LanguageModel>[] = [
-  { key: "code", header: "Mã", sortable: true, labelField: true },
-  { key: "name", header: "Tên", sortable: true },
-  { key: "nativeName", header: "Tên bản địa", sortable: true },
-  { key: "isDefault", header: "Mặc định", type: "boolean", sortable: true },
-  { key: "active", header: "Kích hoạt", type: "boolean", sortable: true },
-  { key: "updatedAt", header: "Cập nhật lúc", type: "datetime", sortable: true },
+  { key: "code", header: l("admin.languages.table.columns.code"), sortable: true, labelField: true },
+  { key: "name", header: l("admin.languages.table.columns.name"), sortable: true },
+  { key: "nativeName", header: l("admin.languages.table.columns.native_name"), sortable: true },
+  { key: "isDefault", header: l("admin.languages.table.columns.is_default"), type: "boolean", sortable: true },
+  { key: "active", header: l("admin.languages.table.columns.active"), type: "boolean", sortable: true },
+  { key: "updatedAt", header: l("admin.languages.table.columns.updated_at"), type: "datetime", sortable: true },
 ];
 
 registerTable("languages", () =>

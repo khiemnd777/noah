@@ -37,6 +37,8 @@ import { packageData } from "./auto-form-package";
 import { resolveSubmitButtons } from "./auto-form.helper";
 import { emit, off, on } from "../module/event-bus";
 import { getUserFriendlyErrorMessage } from "@core/network/api-error";
+import { isI18nText, resolveLocalizedText } from "@root/core/i18n/localized-text";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 function mapMetadataFieldTypeToFieldKind(type: string): FieldKind {
   switch (type) {
@@ -639,9 +641,9 @@ function resolveMode(schema: FormSchema, initialVals: any): FormMode {
 function renderModeText(
   t?: ModeText,
   ctx?: { mode: FormMode; values: any; result?: any }
-): string | undefined {
+): unknown {
   if (!t) return undefined;
-  if (typeof t === "string") return t;
+  if (typeof t === "string" || isI18nText(t)) return t;
   if (typeof t === "function") return t(ctx!);
   return t[ctx!.mode];
 }
@@ -697,6 +699,7 @@ type Props = AutoFormProps & {
 
 export const AutoForm = React.forwardRef<AutoFormRef, Props>(
   ({ name, schema: schemaProp, initial, onSaved, notifier }, ref) => {
+    const { t } = useI18n();
     const toasts = notifier ?? toast;
 
     /* LOAD SCHEMA */
@@ -1227,10 +1230,10 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
         if (btn.toasts?.saved !== "") {
           toasts.success(
-            renderModeText(
+            resolveLocalizedText(renderModeText(
               btn.toasts?.saved ?? schema!.toasts?.saved,
               { mode, values, result }
-            ) ?? "Đã lưu"
+            ) as any, t) ?? "Đã lưu"
           );
         }
 
@@ -1246,9 +1249,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           { mode, values }
         );
 
-        toasts.error(
-          friendlyMessage ?? failedToast ?? "Lỗi"
-        );
+        toasts.error(friendlyMessage ?? resolveLocalizedText(failedToast as any, t) ?? "Lỗi");
         return false;
       } finally {
         setSaving(false);

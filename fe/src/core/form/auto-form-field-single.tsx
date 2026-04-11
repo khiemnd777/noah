@@ -32,6 +32,8 @@ import { QRField } from "@root/core/form/qr-field";
 import { fDate, fDatetime, formatDate, formatDateTime } from "@root/shared/utils/datetime.utils";
 import { prefixCurrency } from "@root/shared/utils/currency.utils";
 import { useDebounce } from "@root/core/hooks/use-debounce";
+import { resolveLocalizedText } from "@root/core/i18n/localized-text";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 
 // -----------------------------------------------------------
@@ -157,6 +159,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   error?: string | null;
   ctx?: FormContext,
 }) {
+  const { t } = useI18n();
   const nameValue = values[f.name];
   const altNameValue = f.altName ? values[f.altName] : null;
   const [searchSingleLabel, setSearchSingleLabel] = React.useState<string | null>(null);
@@ -172,6 +175,14 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   const isAsText = typeof f.asTextFn === "function"
     ? f.asTextFn(values, ctx)
     : Boolean(f.asText);
+  const fieldLabel = resolveLocalizedText(f.label, t);
+  const fieldHelperText = resolveLocalizedText(f.helperText, t);
+  const fieldPlaceholder = resolveLocalizedText(f.placeholder, t);
+  const currentPasswordLabel = resolveLocalizedText(f.currentLabel, t) || "Mật khẩu hiện tại";
+  const newPasswordLabel =
+    resolveLocalizedText(f.newLabel, t) || (f.kind === "new-password" ? "Mật khẩu" : "Mật khẩu mới");
+  const confirmPasswordLabel =
+    resolveLocalizedText(f.confirmLabel, t) || (f.kind === "new-password" ? "Xác nhận mật khẩu" : "Xác nhận mật khẩu mới");
   // const debouncedTextChange = useDebounce((nextVal: string) => {
   //   setValue(f.name, nextVal);
   // }, 300);
@@ -248,9 +259,9 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   if (f.kind === "qr") {
     return (
       <Stack spacing={0.5}>
-        <Typography variant="caption" color="text.secondary">
-          {f.label}
-        </Typography>
+          <Typography variant="caption" color="text.secondary">
+          {fieldLabel}
+          </Typography>
         <QRField value={values[f.name]} {...f.qr} />
       </Stack>
     );
@@ -261,7 +272,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
       return (
         <Stack spacing={0.5}>
           <Typography variant="caption" color="text.secondary">
-            {f.label}
+            {fieldLabel}
           </Typography>
           <Typography>{searchSingleLabel ?? "—"}</Typography>
         </Stack>
@@ -270,7 +281,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
     return (
       <Stack spacing={0.5}>
         <Typography variant="caption" color="text.secondary">
-          {f.label}
+          {fieldLabel}
         </Typography>
         {renderAsText(f, values)}
       </Stack>
@@ -282,12 +293,12 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
     typeof f.disableIf === "function" ? f.disableIf(values) : false;
 
   const common = {
-    label: f.label,
+    label: fieldLabel,
     fullWidth: f.fullWidth ?? true,
     size: f.size ?? "small",
     error: !!error,
-    helperText: error ?? f.helperText,
-    placeholder: f.placeholder,
+    helperText: error ?? fieldHelperText,
+    placeholder: fieldPlaceholder,
     name: f.name,
     disabled: isDisabled,
   } as const;
@@ -296,13 +307,13 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   if (f.kind === "password") {
     return (
       <PasswordField
-        label={f.label}
+        label={fieldLabel}
         value={values[f.name] ?? ""}
         onChange={(v) => setValue(f.name, v)}
         size={f.size ?? "small"}
         fullWidth={f.fullWidth ?? true}
         error={!!error}
-        helperText={error ?? f.helperText}
+        helperText={error ?? fieldHelperText}
       />
     );
   }
@@ -310,26 +321,23 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   // NEW-PASSWORD
   if (f.kind === "new-password") {
     const val = values[f.name] ?? { password: "", confirm: "" };
-    const newLabel = f.newLabel ?? "Mật khẩu";
-    const confirmLabel = f.confirmLabel ?? "Xác nhận mật khẩu";
-
     return (
       <Stack spacing={1}>
         <PasswordField
-          label={newLabel}
+          label={newPasswordLabel}
           value={val.password}
           onChange={(v) => setValue(f.name, { ...val, password: v })}
           size={f.size ?? "small"}
           fullWidth={f.fullWidth ?? true}
         />
         <PasswordField
-          label={confirmLabel}
+          label={confirmPasswordLabel}
           value={val.confirm}
           onChange={(v) => setValue(f.name, { ...val, confirm: v })}
           size={f.size ?? "small"}
           fullWidth={f.fullWidth ?? true}
           error={!!error}
-          helperText={error ?? f.helperText}
+          helperText={error ?? fieldHelperText}
         />
       </Stack>
     );
@@ -338,34 +346,30 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   // CHANGE-PASSWORD
   if (f.kind === "change-password") {
     const val = values[f.name] ?? { current: "", password: "", confirm: "" };
-    const currentLabel = f.currentLabel ?? "Mật khẩu hiện tại";
-    const newLabel = f.newLabel ?? "Mật khẩu mới";
-    const confirmLabel = f.confirmLabel ?? "Xác nhận mật khẩu mới";
-
     return (
       <Stack spacing={1}>
         <PasswordField
-          label={currentLabel}
+          label={currentPasswordLabel}
           value={val.current}
           onChange={(v) => setValue(f.name, { ...val, current: v })}
           size={f.size ?? "small"}
           fullWidth={f.fullWidth ?? true}
         />
         <PasswordField
-          label={newLabel}
+          label={newPasswordLabel}
           value={val.password}
           onChange={(v) => setValue(f.name, { ...val, password: v })}
           size={f.size ?? "small"}
           fullWidth={f.fullWidth ?? true}
         />
         <PasswordField
-          label={confirmLabel}
+          label={confirmPasswordLabel}
           value={val.confirm}
           onChange={(v) => setValue(f.name, { ...val, confirm: v })}
           size={f.size ?? "small"}
           fullWidth={f.fullWidth ?? true}
           error={!!error}
-          helperText={error ?? f.helperText}
+          helperText={error ?? fieldHelperText}
         />
       </Stack>
     );
@@ -411,7 +415,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
 
     return (
       <DateTimePicker
-        label={f.label}
+        label={fieldLabel}
         value={val}
         format={fDatetime}
         onChange={(d) => setValue(f.name, d ? d.toISOString() : "")}
@@ -420,7 +424,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
             size: f.size ?? "small",
             fullWidth: f.fullWidth ?? true,
             error: !!error,
-            helperText: error ?? f.helperText,
+            helperText: error ?? fieldHelperText,
           },
         }}
       />
@@ -434,7 +438,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
 
     return (
       <DatePicker
-        label={f.label}
+        label={fieldLabel}
         value={val}
         format={fDate}
         onChange={(d) => {
@@ -446,7 +450,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
             size: f.size ?? "small",
             fullWidth: f.fullWidth ?? true,
             error: !!error,
-            helperText: error ?? f.helperText,
+            helperText: error ?? fieldHelperText,
           },
         }}
       />
@@ -599,11 +603,11 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
         renderInput={(params) => (
           <TextField
             {...params}
-            label={f.label}
+            label={fieldLabel}
             size={f.size ?? "small"}
             fullWidth={f.fullWidth ?? true}
             error={!!error}
-            helperText={error ?? f.helperText}
+            helperText={error ?? fieldHelperText}
           />
         )}
       />
@@ -651,11 +655,11 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
         renderInput={(params) => (
           <TextField
             {...params}
-            label={f.label}
+            label={fieldLabel}
             size={f.size ?? "small"}
             fullWidth={f.fullWidth ?? true}
             error={!!error}
-            helperText={error ?? f.helperText}
+            helperText={error ?? fieldHelperText}
           />
         )}
         renderTags={(tagValue, getTagProps) =>
@@ -736,11 +740,11 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
         renderInput={(params) => (
           <TextField
             {...params}
-            label={f.label}
+            label={fieldLabel}
             size={f.size ?? "small"}
             fullWidth={f.fullWidth ?? true}
             error={!!error}
-            helperText={error ?? f.helperText}
+            helperText={error ?? fieldHelperText}
             InputProps={{
               ...params.InputProps,
               endAdornment: (
@@ -767,12 +771,12 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
     return (
       <SearchListField
         disabled={isDisabled}
-        label={f.label}
+        label={fieldLabel}
         values={values}
-        placeholder={f.placeholder}
+        placeholder={fieldPlaceholder}
         size={f.size ?? "small"}
         fullWidth={f.fullWidth ?? true}
-        helperText={f.helperText}
+        helperText={fieldHelperText}
         error={error}
         selectedIds={selectedIds}
         onChange={(nextIds) => {
@@ -809,13 +813,13 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
       <SearchSingleField
         key={`searchsingle:${f.name}`}
         name={f.name}
-        label={f.label}
+        label={fieldLabel}
         values={values}
         allowUnmatched={f.allowUnmatched}
-        placeholder={f.placeholder}
+        placeholder={fieldPlaceholder}
         size={f.size ?? "small"}
         fullWidth={f.fullWidth ?? true}
-        helperText={f.helperText}
+        helperText={fieldHelperText}
         error={error}
         selectedId={rawId ?? null}
         // onInputChange={(text) => {
@@ -903,12 +907,12 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
 
         <Stack direction="row" spacing={1} alignItems="center">
           <Button variant="outlined" size={f.size ?? "small"} onClick={openPicker}>
-            {f.label}
+            {fieldLabel}
           </Button>
           {error ? (
             <FormHelperText error>{error}</FormHelperText>
-          ) : f.helperText ? (
-            <FormHelperText>{f.helperText}</FormHelperText>
+          ) : fieldHelperText ? (
+            <FormHelperText>{fieldHelperText}</FormHelperText>
           ) : null}
         </Stack>
 
@@ -936,9 +940,9 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
     return (
       <ImageUploadField
         name={f.name}
-        label={f.label}
+        label={fieldLabel}
         size={f.size ?? "small"}
-        helperText={f.helperText}
+        helperText={fieldHelperText}
         error={error}
         multiple={multiple}
         maxFiles={f.maxFiles}
@@ -965,7 +969,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
               onChange={(e) => setValue(f.name, e.target.checked)}
             />
           }
-          label={f.label}
+          label={fieldLabel}
         />
         {error ? <FormHelperText>{error}</FormHelperText> : null}
       </FormControl>
@@ -987,7 +991,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
               onChange={(e) => setValue(f.name, e.target.checked)}
             />
           }
-          label={f.label}
+          label={fieldLabel}
         />
         {error ? <FormHelperText>{error}</FormHelperText> : null}
       </FormControl>

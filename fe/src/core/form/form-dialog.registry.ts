@@ -1,12 +1,13 @@
 import type { FormSchema } from "@core/form/form.types";
+import type { LocalizedText } from "@root/core/i18n/localized-text";
 
-export type ModeText = string | { create: string; update: string };
+export type ModeText = LocalizedText | { create: LocalizedText; update: LocalizedText };
 export type TitleProp = React.ReactNode | ModeText;
 
 export type FormDialogDefaults = {
   title?: TitleProp;
   confirmText?: ModeText;
-  cancelText?: string;
+  cancelText?: LocalizedText;
   maxWidth?: "xs" | "sm" | "md" | "lg";
 };
 

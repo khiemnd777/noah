@@ -8,6 +8,8 @@ import { FormDialog } from "@root/core/form/form-dialog";
 import { pickModeText, resolveMode, resolveTitle } from "@core/form/form-dialog-mode.helper";
 import { Stack } from "@mui/material";
 import { SafeButton } from "@root/shared/components/button/safe-button";
+import { resolveLocalizedText } from "@root/core/i18n/localized-text";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 // ---------- Host nhiều dialog ----------
 export function FormDialogHost() {
@@ -33,6 +35,7 @@ export function FormDialogHost() {
 
 // ---------- Một instance dialog độc lập ----------
 function DialogInstance({ payload }: { payload: Payload }) {
+  const { t } = useI18n();
   // ---- states/refs cho từng dialog ----
   const [open, setOpen] = React.useState(true); // được mở khi instance mount
   const [submitting, setSubmitting] = React.useState(false);
@@ -90,13 +93,14 @@ function DialogInstance({ payload }: { payload: Payload }) {
       modeCtx
     ) ?? "Form";
 
-  const confirmText =
+  const confirmTextValue =
     pickModeText(
       (payload.options?.confirmText ?? defaults.confirmText) as any,
       modeCtx
     ) ?? (mode === "create" ? "Create" : "Save");
 
-  const cancelText = payload.options?.cancelText ?? defaults.cancelText ?? "Cancel";
+  const confirmText = resolveLocalizedText(confirmTextValue as any, t);
+  const cancelText = resolveLocalizedText((payload.options?.cancelText ?? defaults.cancelText ?? "Cancel") as any, t);
   const maxWidth = payload.options?.maxWidth ?? defaults.maxWidth ?? "md";
 
   // ---- handlers ----
@@ -144,7 +148,7 @@ function DialogInstance({ payload }: { payload: Payload }) {
   return (
     <FormDialog
       open={open}
-      title={titleNode as any}
+      title={React.isValidElement(titleNode) ? titleNode : resolveLocalizedText(titleNode as any, t)}
       confirmText={confirmText}
       cancelText={cancelText}
       submitting={submitting || resolvingInitial}
@@ -177,7 +181,7 @@ function DialogInstance({ payload }: { payload: Payload }) {
                     }
                   }}
                 >
-                  {btn.label ?? btn.name}
+                  {resolveLocalizedText(btn.label ?? btn.name, t)}
                 </SafeButton>
               );
             })}

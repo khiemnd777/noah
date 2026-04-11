@@ -1,6 +1,8 @@
 import { nanoid } from "nanoid";
 
-export type ModeText = string | ((ctx: { mode: "create" | "edit"; values: any; initial: any }) => React.ReactNode);
+import type { LocalizedText } from "@root/core/i18n/localized-text";
+
+export type ModeText = LocalizedText | ((ctx: { mode: "create" | "edit"; values: any; initial: any }) => React.ReactNode);
 
 export type OpenOptions = {
   /** initial thô (có thể partial); sẽ đi qua initialResolver của schema nếu có */
@@ -8,7 +10,7 @@ export type OpenOptions = {
   /** cho phép override title/confirm/cancel theo mode */
   title?: ModeText;
   confirmText?: ModeText;
-  cancelText?: string;
+  cancelText?: LocalizedText;
   /** MUI Dialog maxWidth, mặc định "sm" */
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   /** callback sau khi submit thành công; nhận values đã submit */

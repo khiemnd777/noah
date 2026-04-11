@@ -30,6 +30,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { getContrastText } from "@root/shared/utils/color.utils";
 import { navigate } from "@root/core/navigation/navigate";
+import { resolveLocalizedText } from "@root/core/i18n/localized-text";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 
 const formatColumnHeader = (label?: string) => label?.toUpperCase();
@@ -292,6 +294,7 @@ export function EditTable<T extends { id?: string | number }>({
   stickyTopOffset = 0,
   onReorder,
 }: EditTableProps<T>) {
+  const { t } = useI18n();
   const isClickableRow = typeof onRowClick === "function";
 
   const handleRowClick = React.useCallback((row: T) => {
@@ -784,7 +787,7 @@ export function EditTable<T extends { id?: string | number }>({
               const sortable = !!c.sortable || !!c.accessor || !!c.comparator;
               const isActive = (controlledSortBy ?? orderBy) === k;
               const dir = (controlledSortDir ?? order) ?? "asc";
-              const headerLabel = formatColumnHeader(c.header);
+              const headerLabel = formatColumnHeader(resolveLocalizedText(c.header, t));
 
               const left = c.stickyLeft ? baseLeftOffset + (leftOffsets[idx] ?? 0) : undefined;
               const right = c.stickyRight ? (rightOffsets[idx] ?? 0) : undefined;

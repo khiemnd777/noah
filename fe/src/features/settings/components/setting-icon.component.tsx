@@ -7,9 +7,9 @@ export default function SettingIcon() {
   const { t } = useI18n();
 
   return (
-    <Tooltip title={t("admin.toolbar.settings.tooltip", "Cài đặt")}>
+    <Tooltip title={t("admin.toolbar.settings.tooltip")}>
       <Box
-        aria-label={t("admin.toolbar.settings.tooltip", "Cài đặt")}
+        aria-label={t("admin.toolbar.settings.tooltip")}
         onClick={() => navigate("/settings")}
         sx={{
           position: "relative",

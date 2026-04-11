@@ -69,15 +69,15 @@ function moduleFromKey(key: string): string | null {
 function findValidationMessage(
   draft: LanguageResourceModel,
   resources: LanguageResourceModel[],
-  t: (key: string, fallback: string) => string,
+  t: (key: string, fallback?: string) => string,
   ignoreIndex?: number,
 ): string | null {
   const key = String(draft.key ?? "").trim();
   if (!key) {
-    return t("admin.languages.validation.resource_key_required", "Resource key không được để trống.");
+    return t("admin.languages.validation.resource_key_required");
   }
   if (!ADMIN_RESOURCE_KEY_REGEX.test(key)) {
-    return t("admin.languages.validation.resource_key_invalid", `Resource key "${key}" không đúng format admin.{module}.*.`);
+    return t("admin.languages.validation.resource_key_invalid").replace("{key}", key);
   }
 
   const duplicated = resources.some((resource, index) => {
@@ -86,7 +86,7 @@ function findValidationMessage(
   });
 
   if (duplicated) {
-    return t("admin.languages.validation.resource_key_duplicate", `Resource key "${key}" đang bị trùng.`);
+    return t("admin.languages.validation.resource_key_duplicate").replace("{key}", key);
   }
 
   return null;
@@ -171,11 +171,11 @@ function ResourceEditorDialog({
       open={open}
       title={
         mode === "edit"
-          ? t("admin.languages.resources.edit_title", "Chỉnh sửa resource")
-          : t("admin.languages.resources.add_title", "Thêm resource")
+          ? t("admin.languages.resources.edit_title")
+          : t("admin.languages.resources.add_title")
       }
-      confirmText={mode === "edit" ? t("admin.languages.actions.update", "Cập nhật") : t("admin.languages.actions.create", "Tạo mới")}
-      cancelText={t("admin.languages.actions.cancel", "Huỷ")}
+      confirmText={mode === "edit" ? t("admin.general.update_button") : t("admin.general.create_button")}
+      cancelText={t("admin.general.cancel_button")}
       onClose={onClose}
       onSubmit={handleSubmit}
       maxWidth="lg"
@@ -195,7 +195,7 @@ function ResourceEditorDialog({
         >
           <Stack spacing={2.5} sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" fontWeight={600}>
-              {t("admin.languages.resources.default_column", "Default")}
+              {t("admin.languages.resources.default_column")}
             </Typography>
             {mode === "add" ? (
               <Autocomplete
@@ -213,8 +213,8 @@ function ResourceEditorDialog({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label={t("admin.languages.resources.default_search_key", "Tìm key mặc định")}
-                    helperText={t("admin.languages.resources.default_search_helper", "Chọn key mặc định hoặc nhập key mới")}
+                    label={t("admin.languages.resources.default_search_key")}
+                    helperText={t("admin.languages.resources.default_search_helper")}
                     sx={compareFieldSx}
                   />
                 )}
@@ -222,7 +222,7 @@ function ResourceEditorDialog({
             ) : null}
             <TextField
               fullWidth
-              label={t("admin.languages.resources.key_label", "Resource key")}
+              label={t("admin.languages.resources.key_label")}
               value={defaultKey}
               InputProps={{ readOnly: true }}
               helperText=" "
@@ -232,13 +232,13 @@ function ResourceEditorDialog({
               fullWidth
               multiline
               minRows={6}
-              label={t("admin.languages.resources.value_label", "Giá trị")}
+              label={t("admin.languages.resources.value_label")}
               value={defaultValue}
               InputProps={{ readOnly: true }}
               helperText={
                 defaultResource
                   ? undefined
-                  : t("admin.languages.resources.default_missing", "Không có resource mặc định tương ứng cho key này.")
+                  : t("admin.languages.resources.default_missing")
               }
               sx={compareFieldSx}
             />
@@ -246,21 +246,21 @@ function ResourceEditorDialog({
 
           <Stack spacing={2.5} sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" fontWeight={600}>
-              {t("admin.languages.resources.current_column", `Ngôn ngữ hiện tại (${currentLanguageCode})`)}
+              {t("admin.languages.resources.current_column").replace("{code}", currentLanguageCode)}
             </Typography>
             <TextField
               fullWidth
-              label={t("admin.languages.resources.key_label", "Resource key")}
+              label={t("admin.languages.resources.key_label")}
               value={draft.key}
               onChange={(event) => handleChange({ key: event.target.value })}
-              helperText={t("admin.languages.resources.key_helper", "Bắt buộc theo format admin.{module}.*")}
+              helperText={t("admin.languages.resources.key_helper")}
               sx={compareFieldSx}
             />
             <TextField
               fullWidth
               multiline
               minRows={6}
-              label={t("admin.languages.resources.value_label", "Giá trị")}
+              label={t("admin.languages.resources.value_label")}
               value={draft.value}
               onChange={(event) => handleChange({ value: event.target.value })}
               helperText=" "
@@ -370,7 +370,8 @@ export function LanguageResourcesEditor({
       content: (
         <Stack spacing={1.5}>
           {moduleRows.length === 0 ? (
-            <Alert severity="info">{t("admin.languages.resources.empty_module", "Chưa có resource nào cho module này.")}</Alert>
+            <Alert severity="info">{t("admin.languages.resources.empty_module")}</Alert>
+            
           ) : (
             <TableContainer
               sx={(theme) => ({
@@ -382,9 +383,9 @@ export function LanguageResourcesEditor({
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell width={180}>{t("admin.languages.resources.actions_header", "Thao tác")}</TableCell>
-                    <TableCell width="35%">{t("admin.languages.resources.key_label", "Resource key")}</TableCell>
-                    <TableCell>{t("admin.languages.resources.value_label", "Giá trị")}</TableCell>
+                    <TableCell width={180}>{t("admin.languages.resources.actions_header")}</TableCell>
+                    <TableCell width="35%">{t("admin.languages.resources.key_label")}</TableCell>
+                    <TableCell>{t("admin.languages.resources.value_label")}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -399,7 +400,7 @@ export function LanguageResourcesEditor({
                             disabled={disabled}
                             onClick={() => setEditingIndex(index)}
                           >
-                            {t("admin.languages.actions.edit", "Edit")}
+                            {t("admin.general.edit_button")}
                           </Button>
                           <Button
                             size="small"
@@ -409,7 +410,7 @@ export function LanguageResourcesEditor({
                             disabled={disabled}
                             onClick={() => setDeleteIndex(index)}
                           >
-                            {t("admin.languages.actions.delete", "Xoá")}
+                            {t("admin.general.delete_button")}
                           </Button>
                         </Stack>
                       </TableCell>
@@ -437,12 +438,12 @@ export function LanguageResourcesEditor({
       <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="body2" color="text.secondary">
-            {t("admin.languages.resources.format_prefix", "Resource keys phải theo format")}
+            {t("admin.languages.resources.format_prefix")}
           </Typography>
-          <Chip size="small" label={t("admin.languages.resources.format_chip", "admin.{module}.*")} />
+          <Chip size="small" label={t("admin.languages.resources.format_chip")} />
         </Stack>
         <Button variant="outlined" startIcon={<AddIcon />} disabled={disabled} onClick={() => setAdding(true)}>
-          {t("admin.languages.resources.add", "Thêm resource")}
+          {t("admin.languages.resources.add")}
         </Button>
       </Stack>
       <TabContainer tabs={tabs} defaultValue={activeModule} onChange={setActiveModule} />
@@ -475,20 +476,14 @@ export function LanguageResourcesEditor({
       />
       <ConfirmDialog
         open={deleteIndex !== null && !!deletingResource}
-        title={t("admin.languages.resources.delete_confirm_title", "Xoá resource này?")}
+        title={t("admin.languages.resources.delete_confirm_title")}
         content={
           deletingResource
-            ? t(
-                "admin.languages.resources.delete_confirm_content",
-                `Bạn có chắc muốn xoá resource "${deletingResource.key}"? Hành động này không thể hoàn tác.`
-              )
-            : t(
-                "admin.languages.resources.delete_confirm_fallback",
-                "Bạn có chắc muốn xoá resource này? Hành động này không thể hoàn tác."
-              )
+            ? t("admin.languages.resources.delete_confirm_content").replace("{key}", deletingResource.key)
+            : t("admin.languages.resources.delete_confirm_fallback")
         }
-        confirmText={t("admin.languages.actions.delete", "Xoá")}
-        cancelText={t("admin.languages.actions.cancel", "Huỷ")}
+        confirmText={t("admin.general.delete_button")}
+        cancelText={t("admin.general.cancel_button")}
         onClose={() => setDeleteIndex(null)}
         onConfirm={handleConfirmDelete}
       />
@@ -516,7 +511,7 @@ export function LanguageDetailWidget() {
       setDetail(data);
       setResources(data.resources ?? []);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, t("admin.languages.messages.detail_load_failed", "Không thể tải chi tiết ngôn ngữ.")));
+      toast.error(getErrorMessage(error, t("admin.languages.messages.detail_load_failed")));
     } finally {
       setLoading(false);
     }
@@ -573,7 +568,7 @@ export function LanguageDetailWidget() {
         if (!defaultLanguageId) {
           if (!active) return;
           setDefaultResources(new Map());
-          toast.error(t("admin.languages.messages.default_load_failed", "Không thể tải resource mặc định để so sánh."));
+          toast.error(t("admin.languages.messages.default_load_failed"));
           return;
         }
 
@@ -584,7 +579,7 @@ export function LanguageDetailWidget() {
       } catch (error: unknown) {
         if (!active) return;
         setDefaultResources(new Map());
-        toast.error(getErrorMessage(error, t("admin.languages.messages.default_load_failed", "Không thể tải resource mặc định để so sánh.")));
+        toast.error(getErrorMessage(error, t("admin.languages.messages.default_load_failed")));
       }
     }
 
@@ -601,20 +596,17 @@ export function LanguageDetailWidget() {
     for (const resource of resources) {
       const key = String(resource.key ?? "").trim();
       if (!key) {
-        toast.error(t("admin.languages.validation.resource_key_required", "Resource key không được để trống."));
+        toast.error(t("admin.languages.validation.resource_key_required"));
         return false;
       }
       if (!ADMIN_RESOURCE_KEY_REGEX.test(key)) {
         toast.error(
-          t(
-            "admin.languages.validation.resource_key_invalid",
-            `Resource key "${key}" không đúng format admin.{module}.*.`
-          )
+          t("admin.languages.validation.resource_key_invalid").replace("{key}", key)
         );
         return false;
       }
       if (seen.has(key)) {
-        toast.error(t("admin.languages.validation.resource_key_duplicate", `Resource key "${key}" đang bị trùng.`));
+        toast.error(t("admin.languages.validation.resource_key_duplicate").replace("{key}", key));
         return false;
       }
       seen.add(key);
@@ -638,9 +630,9 @@ export function LanguageDetailWidget() {
     try {
       const file = await exportLanguageXml(numericLanguageId);
       saveBlob(file.bytes, file.filename, file.contentType);
-      toast.success(t("admin.languages.messages.export_success", "Xuất XML thành công."));
+      toast.success(t("admin.languages.messages.export_success"));
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, t("admin.languages.messages.export_failed", "Xuất XML thất bại.")));
+      toast.error(getErrorMessage(error, t("admin.languages.messages.export_failed")));
     }
   }, [numericLanguageId, t]);
 
@@ -656,25 +648,25 @@ export function LanguageDetailWidget() {
   }, [loadDetail, numericLanguageId]);
 
   if (!languageId) {
-    return <Alert severity="error">{t("admin.languages.messages.missing_id", "Thiếu mã ngôn ngữ.")}</Alert>;
+    return <Alert severity="error">{t("admin.languages.messages.missing_id")}</Alert>;
   }
 
   if (loading) {
-    return <Alert severity="info">{t("admin.languages.messages.detail_loading", "Đang tải chi tiết ngôn ngữ...")}</Alert>;
+    return <Alert severity="info">{t("admin.languages.messages.detail_loading")}</Alert>;
   }
 
   if (!detail) {
-    return <Alert severity="error">{t("admin.languages.messages.detail_not_found", "Không tìm thấy ngôn ngữ.")}</Alert>;
+    return <Alert severity="error">{t("admin.languages.messages.detail_not_found")}</Alert>;
   }
 
   return (
     <Stack spacing={2}>
       <SectionCard
-        title={t("admin.languages.detail.metadata_title", "Thông tin ngôn ngữ")}
+        title={t("admin.languages.detail.metadata_title")}
         extra={
           <IfPermission permissions={["languages.update"]}>
             <SafeButton variant="contained" startIcon={<SaveOutlinedIcon />} onClick={() => void handleSave()}>
-              {t("admin.languages.actions.save", "Lưu")}
+              {t("admin.general.save_button")}
             </SafeButton>
           </IfPermission>
         }
@@ -688,17 +680,17 @@ export function LanguageDetailWidget() {
       </SectionCard>
 
       <SectionCard
-        title={t("admin.languages.detail.resources_title", "Admin Resources")}
+        title={t("admin.languages.detail.resources_title")}
         extra={
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <IfPermission permissions={["languages.export"]}>
               <Button variant="outlined" startIcon={<DownloadOutlinedIcon />} onClick={() => void handleExport()}>
-                {t("admin.languages.actions.export_xml", "Xuất XML")}
+                {t("admin.general.export_button")}
               </Button>
             </IfPermission>
             <IfPermission permissions={["languages.import"]}>
               <Button variant="outlined" startIcon={<CloudUploadOutlinedIcon />} onClick={handleOpenImportDialog}>
-                {t("admin.languages.actions.import_xml", "Nhập XML")}
+                {t("admin.general.import_button")}
               </Button>
             </IfPermission>
           </Stack>
@@ -706,7 +698,7 @@ export function LanguageDetailWidget() {
       >
         <Stack spacing={2}>
           <Alert severity="info">
-            {t("admin.languages.resources.info", "Dùng resource keys theo chuẩn")} <strong>admin.{"{module}"}.*</strong>. {t("admin.languages.resources.example_prefix", "Ví dụ:")} <strong>admin.settings.title</strong>.
+            {t("admin.languages.resources.info")} <strong>admin.{"{module}"}.*</strong>. {t("admin.languages.resources.example_prefix")} <strong>admin.settings.title</strong>.
           </Alert>
           <Divider />
           <LanguageResourcesEditor

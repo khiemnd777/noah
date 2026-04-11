@@ -1,4 +1,5 @@
 import type { FieldDef } from "@core/form/types";
+import type { LocalizedText } from "@root/core/i18n/localized-text";
 
 export type HttpMethod = "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -40,15 +41,15 @@ export type FormHooks = {
 export type FormMode = "create" | "update";
 
 export type ModeText =
-  | string
-  | { create: string; update: string }
-  | ((ctx: { mode: FormMode; values: any; result?: any }) => string);
+  | LocalizedText
+  | { create: LocalizedText; update: LocalizedText }
+  | ((ctx: { mode: FormMode; values: any; result?: any }) => LocalizedText);
 
 export type GroupConfig = { name: string; label?: string; col?: number };
 
 export type SubmitButton = {
   name: string;
-  label?: string;
+  label?: LocalizedText;
   color?:
   | "primary"
   | "secondary"
@@ -125,4 +126,3 @@ export type AutoFormRef = {
   setValue: (name: string, v: any) => void;
   setAllValues: (obj: Record<string, any>) => void
 };
-

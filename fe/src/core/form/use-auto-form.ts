@@ -2,6 +2,8 @@ import * as React from "react";
 import type { FieldDef, FieldRules, AutoFormOptions, PasswordRules } from "@core/form/types";
 import { snakeToCamel } from "@shared/utils/string.utils";
 import dayjs from "dayjs";
+import { isI18nText } from "@root/core/i18n/localized-text";
+import { useI18nStore } from "@store/i18n-store";
 
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -64,6 +66,14 @@ function normalizeCustomInitial(raw?: Record<string, any>): Record<string, any> 
 function getReqMsg(r?: boolean | string) {
   if (!r) return null;
   return typeof r === "string" ? r : "This field is required";
+}
+
+function resolveRuleLabel(label: unknown): string | undefined {
+  if (!label) return undefined;
+  if (typeof label === "string") return label;
+  if (!isI18nText(label)) return undefined;
+  const { resources } = useI18nStore.getState();
+  return resources[label.key] ?? label.fallback ?? label.key;
 }
 
 type Errors = Record<string, string | null>;
@@ -137,8 +147,9 @@ function validateChangePasswordObject(value: any, def: FieldDef, allValues: Reco
   return null;
 }
 
-export function validateOneSync(value: any, rules?: FieldRules, label?: string, kind?: string): string | null {
+export function validateOneSync(value: any, rules?: FieldRules, label?: unknown, kind?: string): string | null {
   if (!rules) return null;
+  const resolvedLabel = resolveRuleLabel(label);
 
   const reqMsg = getReqMsg(rules.required);
   if (reqMsg) {
@@ -153,9 +164,9 @@ export function validateOneSync(value: any, rules?: FieldRules, label?: string, 
 
   if (typeof value === "string" && String(value).trim() !== '') {
     if (rules.minLength != null && value.length < rules.minLength)
-      return `${label ?? "This field"} must be at least ${rules.minLength} characters`;
+      return `${resolvedLabel ?? "This field"} must be at least ${rules.minLength} characters`;
     if (rules.maxLength != null && value.length > rules.maxLength)
-      return `${label ?? "This field"} must be at most ${rules.maxLength} characters`;
+      return `${resolvedLabel ?? "This field"} must be at most ${rules.maxLength} characters`;
   }
 
   if (kind === "email" && value && !emailRegex.test(value)) {
@@ -163,25 +174,25 @@ export function validateOneSync(value: any, rules?: FieldRules, label?: string, 
   }
 
   if (typeof value === "number" && Number.isFinite(value)) {
-    if (rules.min != null && value < rules.min) return `${label ?? "Value"} must be ≥ ${rules.min}`;
-    if (rules.max != null && value > rules.max) return `${label ?? "Value"} must be ≤ ${rules.max}`;
+    if (rules.min != null && value < rules.min) return `${resolvedLabel ?? "Value"} must be ≥ ${rules.min}`;
+    if (rules.max != null && value > rules.max) return `${resolvedLabel ?? "Value"} must be ≤ ${rules.max}`;
   }
 
   if (rules.pattern) {
     const { regex, message } =
       rules.pattern instanceof RegExp ? { regex: rules.pattern, message: undefined } : rules.pattern;
     if (typeof value === "string" && !regex.test(value)) {
-      return message ?? `${label ?? "Value"} has an invalid format`;
+      return message ?? `${resolvedLabel ?? "Value"} has an invalid format`;
     }
   }
 
   if (rules.minDateTime && value) {
     if (new Date(value).getTime() < new Date(rules.minDateTime).getTime())
-      return `${label ?? "Date"} must be after ${new Date(rules.minDateTime).toLocaleString()}`;
+      return `${resolvedLabel ?? "Date"} must be after ${new Date(rules.minDateTime).toLocaleString()}`;
   }
   if (rules.maxDateTime && value) {
     if (new Date(value).getTime() > new Date(rules.maxDateTime).getTime())
-      return `${label ?? "Date"} must be before ${new Date(rules.maxDateTime).toLocaleString()}`;
+      return `${resolvedLabel ?? "Date"} must be before ${new Date(rules.maxDateTime).toLocaleString()}`;
   }
 
   if (rules.custom) {

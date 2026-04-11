@@ -6,6 +6,7 @@ import {
   Box,
   Stack,
 } from "@mui/material";
+import { useAdminI18n } from "@root/core/i18n/use-admin-i18n";
 import type { SearchModel } from "@core/search/search.model";
 import { getSearchRenderer } from "@core/search/search-renderer";
 import { search } from "@core/search/search.api";
@@ -29,6 +30,7 @@ export default function SearchBox({
   fullWidth = true,
   entityType,
 }: SearchBoxProps) {
+  const { t } = useAdminI18n();
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<SearchModel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -138,8 +140,8 @@ export default function SearchBox({
       )}
       noOptionsText={
         query.trim().length < minChars
-          ? `Nhập ít nhất ${minChars} ký tự`
-          : "Không có kết quả"
+          ? t("admin.search.min_chars", `Nhập ít nhất ${minChars} ký tự`).replace("{count}", String(minChars))
+          : t("admin.search.no_results", "Không có kết quả")
       }
     />
   );

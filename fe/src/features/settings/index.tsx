@@ -11,6 +11,10 @@ const mod: ModuleDescriptor = {
       label: "Thiết lập",
       title: "Thiết lập",
       subtitle: "Cấu hình thông tin trang quản lý và giao diện Labo",
+      extra: {
+        i18nTitleKey: "admin.settings.page_title",
+        i18nSubtitleKey: "admin.settings.page_subtitle",
+      },
       path: "/settings",
       icon: <SettingsRoundedIcon />,
       hidden: true,

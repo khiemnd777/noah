@@ -93,14 +93,14 @@ function sortByPriority<T extends { priority?: number; label?: string }>(items: 
 }
 
 type AnyComponent =
-  | React.ComponentType<any>
-  | React.LazyExoticComponent<React.ComponentType<any>>;
+  | React.ComponentType<object>
+  | React.LazyExoticComponent<React.ComponentType<object>>;
 
 function toElement(input?: React.ReactNode | AnyComponent) {
   if (!input) return <GeneralPage />;
   return React.isValidElement(input)
     ? input
-    : React.createElement(input as React.ComponentType<any>);
+    : React.createElement(input as React.ComponentType<object>);
 }
 
 export function withMeta(
@@ -127,6 +127,7 @@ function flattenRoutes(nodes: RouteNode[]): RouteConfig[] {
         title: n.title,
         subtitle: n.subtitle,
         path: n.path,
+        extra: n.extra,
       };
 
       out.push({

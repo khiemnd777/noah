@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import * as React from "react";
 
 export type RouteMeta = {
@@ -6,6 +7,7 @@ export type RouteMeta = {
   title?: string;
   subtitle?: string;
   path: string;
+  extra?: Record<string, unknown>;
 };
 
 const Ctx = React.createContext<RouteMeta | null>(null);

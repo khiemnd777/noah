@@ -12,7 +12,7 @@ function buildLanguageFields(): FieldDef[] {
       name: "code",
       label: "Mã ngôn ngữ",
       kind: "text",
-      placeholder: "vi-VN",
+      placeholder: "vi, en, ja, kr, ...",
       rules: {
         required: "Yêu cầu nhập mã ngôn ngữ",
         maxLength: 32,

@@ -27,6 +27,7 @@ import MyAccountBadge from "@root/shared/components/ui/account-badge";
 import { PageToolbar } from "@root/shared/components/ui/page-toolbar";
 import { useRouteMeta } from "../module/route-meta";
 import { useNavigate } from "react-router-dom";
+import { useAdminI18n } from "@root/core/i18n/use-admin-i18n";
 
 const SIDEBAR_W = 280;
 const SIDEBAR_COLLAPSED_W = 76;
@@ -37,7 +38,8 @@ interface CollapsibleChipProps {
 
 export function BasePage({ children }: { children: React.ReactNode }) {
   const { department } = useAuth();
-  const { key, title, subtitle } = useRouteMeta();
+  const { key, title, subtitle, extra } = useRouteMeta();
+  const { t } = useAdminI18n();
   const reactNavigate = useNavigate();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("md"));
@@ -182,6 +184,18 @@ export function BasePage({ children }: { children: React.ReactNode }) {
     setCollapsed(isSmall);
   }, [isSmall]);
 
+  const toolbarTitle = React.useMemo(() => {
+    const titleKey = typeof extra?.i18nTitleKey === "string" ? extra.i18nTitleKey : null;
+    if (!titleKey) return title ?? "";
+    return t(titleKey, title ?? "");
+  }, [extra, t, title]);
+
+  const toolbarSubtitle = React.useMemo(() => {
+    const subtitleKey = typeof extra?.i18nSubtitleKey === "string" ? extra.i18nSubtitleKey : null;
+    if (!subtitleKey) return subtitle ?? "";
+    return t(subtitleKey, subtitle ?? "");
+  }, [extra, subtitle, t]);
+
   return (
     <Box
       sx={{
@@ -249,7 +263,13 @@ export function BasePage({ children }: { children: React.ReactNode }) {
               zIndex: 10,
             }}
           >
-            <Tooltip title={collapsed ? "Expand" : "Collapse"}>
+            <Tooltip
+              title={
+                collapsed
+                  ? t("admin.layout.expand_sidebar", "Mở rộng menu")
+                  : t("admin.layout.collapse_sidebar", "Thu gọn menu")
+              }
+            >
               <IconButton
                 size="small"
                 onClick={() => setCollapsed(!collapsed)}
@@ -439,7 +459,7 @@ export function BasePage({ children }: { children: React.ReactNode }) {
         <Divider sx={{ my: 1 }} />
 
         {/* Bottom: user info */}
-        <MyAccountBadge collapsed={collapsed} to={(_) => "/account"} />
+        <MyAccountBadge collapsed={collapsed} to={() => "/account"} />
 
       </Paper>
 
@@ -472,8 +492,8 @@ export function BasePage({ children }: { children: React.ReactNode }) {
         >
           <PageToolbar
             key={key}
-            title={title ?? ""}
-            subtitle={subtitle ?? ""}
+            title={toolbarTitle}
+            subtitle={toolbarSubtitle}
             onBack={history.length > 1 ? () => reactNavigate(-1) : undefined}
             actions={
               <>

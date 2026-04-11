@@ -9,9 +9,9 @@ export function LogoutToolbarWidget() {
   const logout = useAuthStore((s) => s.logout);
 
   return (
-    <Tooltip title={t("admin.toolbar.logout.tooltip", "Đăng xuất")}>
+    <Tooltip title={t("admin.toolbar.logout.tooltip")}>
       <Box
-        aria-label={t("admin.toolbar.logout.tooltip", "Đăng xuất")}
+        aria-label={t("admin.toolbar.logout.tooltip")}
         onClick={async () => await logout()}
         sx={{
           position: "relative",

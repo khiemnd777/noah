@@ -3,6 +3,7 @@ import {
   debounce,
   TableContainer
 } from "@mui/material";
+import { useI18n } from "@root/core/i18n/use-i18n";
 import type { MatrixPermission } from "@root/core/network/rbac.types";
 import { fetchRBACMatrix, replaceRBAC } from "@features/rbac/api/rbac.api";
 import { EV_RBAC_MATRIX_INVALIDATE } from "@features/rbac/model/rbac.events";
@@ -12,12 +13,13 @@ const ROLE_COL_W = 160;
 const PERM_COL_W = 220;
 
 export function RBACMatrix() {
+  const { t } = useI18n();
 
   const { data: matrix, setData, loading, error } = useEventInvalidation<MatrixPermission | null>({
     fetcher: () => fetchRBACMatrix(),
     invalidateEvent: EV_RBAC_MATRIX_INVALIDATE,
     initial: null,
-    errorText: "Không thể tải dữ liệu phân quyền",
+    errorText: t("admin.rbac.matrix.messages.load_failed"),
   });
 
   const saveRolePermissions = debounce(async (roleId: number, permIds: number[]) => {
@@ -48,7 +50,7 @@ export function RBACMatrix() {
 
   if (loading) return <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>;
   if (error) return <Box p={4}><Typography color="error">{error}</Typography></Box>;
-  if (!matrix) return <Box p={4}><Typography>Không có dữ liệu RBAC Matrix.</Typography></Box>;
+  if (!matrix) return <Box p={4}><Typography>{t("admin.rbac.matrix.messages.empty")}</Typography></Box>;
 
   return (
     <Paper>
@@ -75,7 +77,7 @@ export function RBACMatrix() {
                   whiteSpace: "nowrap",
                 }}
               >
-                Quyền hạn / Vai trò
+                {t("admin.rbac.matrix.permission_role_header")}
               </TableCell>
 
               {matrix.roles.map((role) => (

@@ -18,10 +18,7 @@ export function SearchBoxWidget() {
     <>
       <Box>
         <SearchBox
-          placeholder={t(
-            "admin.search.placeholder",
-            "Tìm kiếm theo tên sản phẩm, đơn hàng, vật tư, nhân sự và nha khoa..."
-          )}
+          placeholder={t("admin.search.placeholder")}
           onSelect={handleSelect}
           minChars={2}
           debounceMs={300}

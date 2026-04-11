@@ -62,7 +62,7 @@ function LanguageToolbarWidget() {
           onChange={handleChange}
           variant="standard"
           inputProps={{
-            "aria-label": t("admin.toolbar.language.tooltip", "Ngôn ngữ giao diện"),
+            "aria-label": t("admin.toolbar.language.tooltip"),
           }}
           sx={{
             minWidth: 112,
@@ -71,7 +71,7 @@ function LanguageToolbarWidget() {
         >
           {languages.length === 0 ? (
             <MenuItem value="">
-              {t("admin.toolbar.language.empty", "Chưa có ngôn ngữ")}
+              {t("admin.toolbar.language.empty")}
             </MenuItem>
           ) : (
             languages.map((language) => (

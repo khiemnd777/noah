@@ -1,4 +1,5 @@
 import type { ModuleDescriptor } from "@root/core/module/types";
+import { l } from "@root/core/i18n/localized-text";
 import { registerModule } from "@root/core/module/registry";
 import KeyIcon from '@mui/icons-material/Key';
 import OneColumnPage from "@root/core/pages/one-column-page";
@@ -9,9 +10,9 @@ const mod: ModuleDescriptor = {
     {
       key: "rbac",
       permissions: ["rbac.manage"],
-      label: "Quyền hạn",
-      title:"Quyền hạn",
-      subtitle:"Quản lý vai trò và phân quyền.",
+      label: l("admin.rbac.page_title"),
+      title: l("admin.rbac.page_title"),
+      subtitle: l("admin.rbac.page_subtitle"),
       path: "/rbac",
       element: <OneColumnPage />,
       icon: <KeyIcon />,

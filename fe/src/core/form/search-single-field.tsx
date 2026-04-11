@@ -12,6 +12,7 @@ import {
 import AddCircleOutlineRounded from "@mui/icons-material/AddCircleOutlineRounded";
 import type { FormContext } from "./types";
 import { normalizeVietnamese } from "@root/shared/utils/string.utils";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 
 type Size = "small" | "medium";
@@ -94,6 +95,7 @@ function SearchSingleFieldInner<T>(
   props: SearchSingleFieldProps<T>,
   ref: React.ForwardedRef<SearchSingleFieldHandle>
 ) {
+  const { t } = useI18n();
   const {
     name,
     label,
@@ -571,7 +573,7 @@ function SearchSingleFieldInner<T>(
           />
 
           {onOpenCreate && (
-            <Tooltip title="Tạo mới">
+            <Tooltip title={t("admin.general.create_button")}>
               <span>
                 <IconButton color="primary" onClick={onOpenCreate} size={size}>
                   <AddCircleOutlineRounded />

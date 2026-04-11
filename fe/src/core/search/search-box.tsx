@@ -22,7 +22,7 @@ type SearchBoxProps = {
 };
 
 export default function SearchBox({
-  placeholder = "Tìm kiếm…",
+  placeholder,
   autoFocus,
   minChars = 2,
   debounceMs = 300,
@@ -31,6 +31,7 @@ export default function SearchBox({
   entityType,
 }: SearchBoxProps) {
   const { t } = useI18n();
+  const resolvedPlaceholder = placeholder ?? t("admin.search.placeholder");
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<SearchModel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -124,7 +125,7 @@ export default function SearchBox({
           {...params}
           autoFocus={autoFocus}
           fullWidth={fullWidth}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           InputProps={{
@@ -140,8 +141,8 @@ export default function SearchBox({
       )}
       noOptionsText={
         query.trim().length < minChars
-          ? t("admin.search.min_chars", `Nhập ít nhất ${minChars} ký tự`).replace("{count}", String(minChars))
-          : t("admin.search.no_results", "Không có kết quả")
+          ? t("admin.search.min_chars").replace("{count}", String(minChars))
+          : t("admin.search.no_results")
       }
     />
   );

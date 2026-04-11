@@ -899,7 +899,7 @@ export function EditTable<T extends { id?: string | number }>({
                   borderColor: "divider",
                 }}
               >
-                Không có dữ liệu
+                {t("admin.general.no_data")}
               </Box>
             </Box>
           ) : (

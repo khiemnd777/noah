@@ -5,11 +5,12 @@ import { navigate } from "@root/core/navigation/navigate";
 
 export default function SearchIcon() {
   const { t } = useI18n();
+  const tooltip = t("admin.toolbar.search.tooltip");
 
   return (
-    <Tooltip title={t("admin.toolbar.search.tooltip", "Tìm kiếm")}>
+    <Tooltip title={tooltip}>
       <Box
-        aria-label={t("admin.toolbar.search.tooltip", "Tìm kiếm")}
+        aria-label={tooltip}
         onClick={() => navigate("/search")}
         sx={{
           position: "relative",

@@ -1,4 +1,5 @@
 import type { ModuleDescriptor } from "@root/core/module/types";
+import { l } from "@root/core/i18n/localized-text";
 import { registerModule } from "@root/core/module/registry";
 
 const mod: ModuleDescriptor = {
@@ -6,8 +7,8 @@ const mod: ModuleDescriptor = {
   routes: [
     {
       key: "auth",
-      title: "Tài khoản",
-      subtitle: "Chỉnh sửa thông tin tài khoản đăng nhập.",
+      title: l("admin.auth.page_title"),
+      subtitle: l("admin.auth.page_subtitle"),
       path: "/account",
       hidden: true,
     },

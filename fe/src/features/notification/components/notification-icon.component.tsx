@@ -11,11 +11,12 @@ export default function NotificationIcon() {
   const { data: count } = useAsync<number>(() => countUnread(), [], {
     key: "notification-unread-count",
   });
+  const tooltip = t("admin.toolbar.notifications.tooltip");
 
   return (
-    <Tooltip title={t("admin.toolbar.notifications.tooltip", "Thông báo")}>
+    <Tooltip title={tooltip}>
       <Box
-        aria-label={t("admin.toolbar.notifications.tooltip", "Thông báo")}
+        aria-label={tooltip}
         onClick={() => navigate("/notification")}
         sx={{
           position: "relative",

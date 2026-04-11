@@ -7,15 +7,17 @@ import { SafeButton } from "@shared/components/button/safe-button";
 import { registerSlot } from "@root/core/module/registry";
 import { useParams } from "react-router-dom";
 import { IfPermission } from "@root/core/auth/if-permission";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 function StaffDetailInformationWidget() {
   const { staffId } = useParams();
   const formStaffInformationRef = React.useRef<AutoFormRef>(null);
+  const { t } = useI18n();
   return (
-    <SectionCard title={"Thông tin nhân sự"} extra={
+    <SectionCard title={t("admin.staff.detail.information_title")} extra={
       <IfPermission permissions={["staff.update"]}>
         <SafeButton variant="contained" startIcon={<SaveOutlinedIcon />} onClick={() => formStaffInformationRef.current?.submit()}>
-          Lưu
+          {t("admin.general.save_button")}
         </SafeButton>
       </IfPermission>
     }>

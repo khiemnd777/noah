@@ -5,13 +5,15 @@ import { AutoForm } from "@root/core/form/auto-form";
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { SafeButton } from "@shared/components/button/safe-button";
 import { registerSlot } from "@root/core/module/registry";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 function AccountWidget() {
   const formAccountRef = React.useRef<AutoFormRef>(null);
+  const { t } = useI18n();
   return (
-    <SectionCard title={"Thông tin tài khoản"} extra={
+    <SectionCard title={t("admin.auth.account.section_title")} extra={
       <SafeButton variant="contained" startIcon={<SaveOutlinedIcon />} onClick={() => formAccountRef.current?.submit()}>
-        Lưu
+        {t("admin.general.save_button")}
       </SafeButton>
     }>
       <AutoForm name="account" ref={formAccountRef} />

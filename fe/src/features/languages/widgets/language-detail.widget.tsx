@@ -30,11 +30,12 @@ import { AutoForm } from "@root/core/form/auto-form";
 import { FormDialog } from "@root/core/form/form-dialog";
 import type { AutoFormRef } from "@root/core/form/form.types";
 import { openFormDialog } from "@root/core/form/form-dialog.service";
-import { useAdminI18n } from "@root/core/i18n/use-admin-i18n";
+import { useI18n } from "@root/core/i18n/use-i18n";
 import { registerSlot } from "@root/core/module/registry";
 import { reloadTable } from "@root/core/table/table-reload";
 import { exportLanguageXml, getLanguageById, listLanguages } from "@features/languages/api/language.api";
 import type { LanguageModel, LanguageResourceModel } from "@features/languages/model/language.model";
+import { ConfirmDialog } from "@shared/components/dialog/confirm-dialog";
 import { SectionCard } from "@shared/components/ui/section-card";
 import { SafeButton } from "@shared/components/button/safe-button";
 import { TabContainer } from "@shared/components/ui/tab-container";
@@ -134,7 +135,7 @@ function ResourceEditorDialog({
   onClose,
   onSubmit,
 }: ResourceDialogProps) {
-  const { t } = useAdminI18n();
+  const { t } = useI18n();
   const [draft, setDraft] = React.useState<LanguageResourceModel>(initialValue);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -303,11 +304,12 @@ export function LanguageResourcesEditor({
   disabled: boolean;
   onChange: (resources: LanguageResourceModel[]) => void;
 }) {
-  const { t } = useAdminI18n();
+  const { t } = useI18n();
   const modules = React.useMemo(() => resolveModules(resources), [resources]);
   const [activeModule, setActiveModule] = React.useState<string>(modules[0] ?? "general");
   const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
   const [adding, setAdding] = React.useState(false);
+  const [deleteIndex, setDeleteIndex] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (!modules.includes(activeModule)) {
@@ -319,6 +321,14 @@ export function LanguageResourcesEditor({
     const next = resources.filter((_, itemIndex) => itemIndex !== index);
     onChange(next);
   }, [onChange, resources]);
+
+  const deletingResource = deleteIndex !== null ? resources[deleteIndex] ?? null : null;
+
+  const handleConfirmDelete = React.useCallback(() => {
+    if (deleteIndex === null) return;
+    handleDelete(deleteIndex);
+    setDeleteIndex(null);
+  }, [deleteIndex, handleDelete]);
 
   const defaultResourceOptions = React.useMemo(() => Array.from(defaultResources.keys()).sort((a, b) => a.localeCompare(b)), [defaultResources]);
 
@@ -397,7 +407,7 @@ export function LanguageResourcesEditor({
                             variant="outlined"
                             startIcon={<DeleteOutlineIcon />}
                             disabled={disabled}
-                            onClick={() => handleDelete(index)}
+                            onClick={() => setDeleteIndex(index)}
                           >
                             {t("admin.languages.actions.delete", "Xoá")}
                           </Button>
@@ -463,12 +473,31 @@ export function LanguageResourcesEditor({
         onClose={() => setAdding(false)}
         onSubmit={handleAddSave}
       />
+      <ConfirmDialog
+        open={deleteIndex !== null && !!deletingResource}
+        title={t("admin.languages.resources.delete_confirm_title", "Xoá resource này?")}
+        content={
+          deletingResource
+            ? t(
+                "admin.languages.resources.delete_confirm_content",
+                `Bạn có chắc muốn xoá resource "${deletingResource.key}"? Hành động này không thể hoàn tác.`
+              )
+            : t(
+                "admin.languages.resources.delete_confirm_fallback",
+                "Bạn có chắc muốn xoá resource này? Hành động này không thể hoàn tác."
+              )
+        }
+        confirmText={t("admin.languages.actions.delete", "Xoá")}
+        cancelText={t("admin.languages.actions.cancel", "Huỷ")}
+        onClose={() => setDeleteIndex(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </Stack>
   );
 }
 
 export function LanguageDetailWidget() {
-  const { t } = useAdminI18n();
+  const { t } = useI18n();
   const { languageId } = useParams();
   const { hasPermission } = usePermissionChecks();
   const formRef = React.useRef<AutoFormRef>(null);

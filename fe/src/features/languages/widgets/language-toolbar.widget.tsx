@@ -8,7 +8,7 @@ import {
   Select,
   type SelectChangeEvent,
 } from "@mui/material";
-import { useAdminI18n } from "@root/core/i18n/use-admin-i18n";
+import { useI18n } from "@root/core/i18n/use-i18n";
 import { registerSlot } from "@root/core/module/registry";
 
 function LanguageToolbarWidget() {
@@ -18,7 +18,7 @@ function LanguageToolbarWidget() {
     isBootstrapping,
     languages,
     t,
-  } = useAdminI18n();
+  } = useI18n();
   const [isSaving, setIsSaving] = React.useState(false);
 
   const handleChange = React.useCallback(

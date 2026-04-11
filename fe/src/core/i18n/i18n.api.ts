@@ -1,10 +1,10 @@
 import { env } from "@core/config/env";
 import { apiClient } from "@core/network/api-client";
 import type {
-  AdminLanguageOption,
-  AdminLanguagePreference,
-  AdminResourceDictionary,
-} from "@core/i18n/admin-i18n.types";
+  LanguageOption,
+  LanguagePreference,
+  ResourceDictionary,
+} from "@core/i18n/i18n.types";
 
 const i18nBasePath = `${env.apiBasePath}/i18n`;
 
@@ -47,7 +47,7 @@ function parseLanguageCode(value: unknown): string | null {
   return typeof nested === "string" && nested.trim() ? nested.trim() : null;
 }
 
-function normalizeLanguageOption(value: unknown): AdminLanguageOption | null {
+function normalizeLanguageOption(value: unknown): LanguageOption | null {
   const record = asRecord(value);
   if (!record) return null;
 
@@ -68,11 +68,11 @@ function normalizeLanguageOption(value: unknown): AdminLanguageOption | null {
   };
 }
 
-function normalizeLanguageCollection(data: unknown): AdminLanguageOption[] {
+function normalizeLanguageCollection(data: unknown): LanguageOption[] {
   if (Array.isArray(data)) {
     return data
       .map(normalizeLanguageOption)
-      .filter((item): item is AdminLanguageOption => item !== null);
+      .filter((item): item is LanguageOption => item !== null);
   }
 
   const record = asRecord(data);
@@ -92,7 +92,7 @@ function normalizeLanguageCollection(data: unknown): AdminLanguageOption[] {
     if (Array.isArray(candidate)) {
       return candidate
         .map(normalizeLanguageOption)
-        .filter((item): item is AdminLanguageOption => item !== null);
+        .filter((item): item is LanguageOption => item !== null);
     }
   }
 
@@ -100,9 +100,9 @@ function normalizeLanguageCollection(data: unknown): AdminLanguageOption[] {
   return single ? [single] : [];
 }
 
-function normalizeResourceEntries(entries: unknown): AdminResourceDictionary {
+function normalizeResourceEntries(entries: unknown): ResourceDictionary {
   if (Array.isArray(entries)) {
-    return entries.reduce<AdminResourceDictionary>((acc, item) => {
+    return entries.reduce<ResourceDictionary>((acc, item) => {
       const record = asRecord(item);
       if (!record) return acc;
       const key = typeof record.key === "string" ? record.key.trim() : "";
@@ -115,7 +115,7 @@ function normalizeResourceEntries(entries: unknown): AdminResourceDictionary {
   const record = asRecord(entries);
   if (!record) return {};
 
-  return Object.entries(record).reduce<AdminResourceDictionary>((acc, [key, value]) => {
+  return Object.entries(record).reduce<ResourceDictionary>((acc, [key, value]) => {
     if (typeof value === "string" && key.trim()) {
       acc[key] = value;
     }
@@ -123,12 +123,9 @@ function normalizeResourceEntries(entries: unknown): AdminResourceDictionary {
   }, {});
 }
 
-function normalizeResources(data: unknown): AdminResourceDictionary {
-  const direct = normalizeResourceEntries(data);
-  if (Object.keys(direct).length > 0) return direct;
-
+function normalizeResources(data: unknown): ResourceDictionary {
   const record = asRecord(data);
-  if (!record) return {};
+  if (!record) return normalizeResourceEntries(data);
 
   const candidates = [
     record.resources,
@@ -143,10 +140,21 @@ function normalizeResources(data: unknown): AdminResourceDictionary {
     if (Object.keys(normalized).length > 0) return normalized;
   }
 
+  const looksLikeEnvelope =
+    "resources" in record ||
+    "requested_code" in record ||
+    "effective_code" in record ||
+    "language" in record ||
+    "data" in record;
+
+  if (!looksLikeEnvelope) {
+    return normalizeResourceEntries(record);
+  }
+
   return {};
 }
 
-export async function listActiveAdminLanguages(): Promise<AdminLanguageOption[]> {
+export async function listActiveLanguages(): Promise<LanguageOption[]> {
   const { data } = await apiClient.get<unknown>(`${i18nBasePath}/active-languages`, {
     cacheMode: "stale-while-revalidate",
     cacheTags: ["admin-i18n:languages"],
@@ -155,7 +163,7 @@ export async function listActiveAdminLanguages(): Promise<AdminLanguageOption[]>
   return normalizeLanguageCollection(data).filter((language) => language.active !== false);
 }
 
-export async function getMyAdminLanguagePreference(): Promise<AdminLanguagePreference> {
+export async function getMyLanguagePreference(): Promise<LanguagePreference> {
   const { data } = await apiClient.get<unknown>(`${i18nBasePath}/me/language`, {
     cacheMode: "stale-while-revalidate",
     cacheTags: ["admin-i18n:preference"],
@@ -166,7 +174,7 @@ export async function getMyAdminLanguagePreference(): Promise<AdminLanguagePrefe
   };
 }
 
-export async function updateMyAdminLanguagePreference(code: string): Promise<AdminLanguagePreference> {
+export async function updateMyLanguagePreference(code: string): Promise<LanguagePreference> {
   const { data } = await apiClient.put<unknown>(
     `${i18nBasePath}/me/language`,
     { code },
@@ -180,7 +188,7 @@ export async function updateMyAdminLanguagePreference(code: string): Promise<Adm
   };
 }
 
-export async function getAdminResourcesByCode(code: string): Promise<AdminResourceDictionary> {
+export async function getResourcesByCode(code: string): Promise<ResourceDictionary> {
   const { data } = await apiClient.get<unknown>(`${i18nBasePath}/admin-resources/${encodeURIComponent(code)}`, {
     cacheMode: "stale-while-revalidate",
     cacheTags: [`admin-i18n:resources:${code}`],

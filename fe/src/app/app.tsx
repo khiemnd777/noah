@@ -7,7 +7,7 @@ import { FormDialogHost } from "@core/form/form-dialog-host";
 import { WebSocketProvider } from "@root/core/network/websocket/ws-provider";
 import { WebSocketWidgets } from "@root/core/network/websocket/ws-widgets";
 import { StackMessage } from "@root/core/network/websocket/ws-stack";
-import { AdminI18nBootstrap } from "@root/core/i18n/admin-i18n-bootstrap";
+import { I18nBootstrap } from "@root/core/i18n/i18n-bootstrap";
 import { useAuthStore } from "@root/store/auth-store";
 
 function SessionBootstrap() {
@@ -26,7 +26,7 @@ export default function App() {
       <WebSocketWidgets />
       <StackMessage />
       <SessionBootstrap />
-      <AdminI18nBootstrap />
+      <I18nBootstrap />
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <AppRouter />
         <Toaster position="top-right" />

@@ -27,7 +27,8 @@ import MyAccountBadge from "@root/shared/components/ui/account-badge";
 import { PageToolbar } from "@root/shared/components/ui/page-toolbar";
 import { useRouteMeta } from "../module/route-meta";
 import { useNavigate } from "react-router-dom";
-import { useAdminI18n } from "@root/core/i18n/use-admin-i18n";
+import { resolveLocalizedText } from "@root/core/i18n/localized-text";
+import { useI18n } from "@root/core/i18n/use-i18n";
 
 const SIDEBAR_W = 280;
 const SIDEBAR_COLLAPSED_W = 76;
@@ -38,8 +39,8 @@ interface CollapsibleChipProps {
 
 export function BasePage({ children }: { children: React.ReactNode }) {
   const { department } = useAuth();
-  const { key, title, subtitle, extra } = useRouteMeta();
-  const { t } = useAdminI18n();
+  const { key, title, subtitle } = useRouteMeta();
+  const { t } = useI18n();
   const reactNavigate = useNavigate();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("md"));
@@ -185,16 +186,12 @@ export function BasePage({ children }: { children: React.ReactNode }) {
   }, [isSmall]);
 
   const toolbarTitle = React.useMemo(() => {
-    const titleKey = typeof extra?.i18nTitleKey === "string" ? extra.i18nTitleKey : null;
-    if (!titleKey) return title ?? "";
-    return t(titleKey, title ?? "");
-  }, [extra, t, title]);
+    return resolveLocalizedText(title, t);
+  }, [t, title]);
 
   const toolbarSubtitle = React.useMemo(() => {
-    const subtitleKey = typeof extra?.i18nSubtitleKey === "string" ? extra.i18nSubtitleKey : null;
-    if (!subtitleKey) return subtitle ?? "";
-    return t(subtitleKey, subtitle ?? "");
-  }, [extra, subtitle, t]);
+    return resolveLocalizedText(subtitle, t);
+  }, [subtitle, t]);
 
   return (
     <Box

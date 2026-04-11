@@ -1,9 +1,9 @@
 import * as React from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useAdminI18nStore } from "@store/admin-i18n-store";
+import { useI18nStore } from "@store/i18n-store";
 
-export function useAdminI18n() {
-  const state = useAdminI18nStore(
+export function useI18n() {
+  const state = useI18nStore(
     useShallow((store) => ({
       languages: store.languages,
       currentLanguageCode: store.currentLanguageCode,

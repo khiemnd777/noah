@@ -1,4 +1,5 @@
 import type { ModuleDescriptor } from "@root/core/module/types";
+import { l } from "@root/core/i18n/localized-text";
 import { registerModule } from "@root/core/module/registry";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 
@@ -8,13 +9,9 @@ const mod: ModuleDescriptor = {
     {
       key: "settings",
       permissions: ["settings.view"],
-      label: "Thiết lập",
-      title: "Thiết lập",
-      subtitle: "Cấu hình thông tin trang quản lý và giao diện Labo",
-      extra: {
-        i18nTitleKey: "admin.settings.page_title",
-        i18nSubtitleKey: "admin.settings.page_subtitle",
-      },
+      label: l("admin.settings.page_title"),
+      title: l("admin.settings.page_title"),
+      subtitle: l("admin.settings.page_subtitle"),
       path: "/settings",
       icon: <SettingsRoundedIcon />,
       hidden: true,

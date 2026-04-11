@@ -2,22 +2,22 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import toast from "react-hot-toast";
 import {
-  getAdminResourcesByCode,
-  getMyAdminLanguagePreference,
-  listActiveAdminLanguages,
-  updateMyAdminLanguagePreference,
-} from "@core/i18n/admin-i18n.api";
+  getMyLanguagePreference,
+  getResourcesByCode,
+  listActiveLanguages,
+  updateMyLanguagePreference,
+} from "@core/i18n/i18n.api";
 import type {
-  AdminLanguageOption,
-  AdminResourceDictionary,
-} from "@core/i18n/admin-i18n.types";
+  LanguageOption,
+  ResourceDictionary,
+} from "@core/i18n/i18n.types";
 
 const FALLBACK_LANGUAGE_CODE = "vi-VN";
 
-type AdminI18nState = {
-  languages: AdminLanguageOption[];
+type I18nState = {
+  languages: LanguageOption[];
   currentLanguageCode: string | null;
-  resources: AdminResourceDictionary;
+  resources: ResourceDictionary;
   isBootstrapping: boolean;
   isReady: boolean;
   bootstrap: () => Promise<void>;
@@ -28,7 +28,7 @@ type AdminI18nState = {
 let bootstrapPromise: Promise<void> | null = null;
 
 function resolveInitialCode(
-  languages: AdminLanguageOption[],
+  languages: LanguageOption[],
   preferredCode: string | null,
   currentLanguageCode: string | null
 ): string {
@@ -43,15 +43,15 @@ function resolveInitialCode(
   return FALLBACK_LANGUAGE_CODE;
 }
 
-async function safeFetchResources(code: string): Promise<AdminResourceDictionary> {
+async function safeFetchResources(code: string): Promise<ResourceDictionary> {
   try {
-    return await getAdminResourcesByCode(code);
+    return await getResourcesByCode(code);
   } catch {
     return {};
   }
 }
 
-export const useAdminI18nStore = create<AdminI18nState>()(
+export const useI18nStore = create<I18nState>()(
   persist(
     (set, get) => ({
       languages: [],
@@ -67,8 +67,8 @@ export const useAdminI18nStore = create<AdminI18nState>()(
           set({ isBootstrapping: true });
           try {
             const [languagesResult, preferenceResult] = await Promise.allSettled([
-              listActiveAdminLanguages(),
-              getMyAdminLanguagePreference(),
+              listActiveLanguages(),
+              getMyLanguagePreference(),
             ]);
 
             const languages =
@@ -121,7 +121,7 @@ export const useAdminI18nStore = create<AdminI18nState>()(
         });
 
         try {
-          const preference = await updateMyAdminLanguagePreference(normalizedCode);
+          const preference = await updateMyLanguagePreference(normalizedCode);
           if (preference.code && preference.code !== normalizedCode) {
             const syncedResources = await safeFetchResources(preference.code);
             set({
@@ -150,7 +150,7 @@ export const useAdminI18nStore = create<AdminI18nState>()(
       },
     }),
     {
-      name: "admin-i18n-store",
+      name: "i18n-store",
       partialize: (state) => ({
         currentLanguageCode: state.currentLanguageCode,
       }),

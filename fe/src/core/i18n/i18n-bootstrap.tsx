@@ -1,13 +1,13 @@
 import * as React from "react";
 import { subscribeAuthEvents } from "@core/network/auth-session";
-import { useAdminI18nStore } from "@store/admin-i18n-store";
+import { useI18nStore } from "@store/i18n-store";
 import { useAuthStore } from "@store/auth-store";
 
-export function AdminI18nBootstrap() {
+export function I18nBootstrap() {
   const userId = useAuthStore((state) => state.user?.id ?? null);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-  const bootstrap = useAdminI18nStore((state) => state.bootstrap);
-  const clear = useAdminI18nStore((state) => state.clear);
+  const bootstrap = useI18nStore((state) => state.bootstrap);
+  const clear = useI18nStore((state) => state.clear);
 
   React.useEffect(() => {
     if (!isLoggedIn || !userId) {

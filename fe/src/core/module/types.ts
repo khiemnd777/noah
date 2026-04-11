@@ -1,5 +1,6 @@
 import type { ReactNode, LazyExoticComponent, JSX } from "react";
 import type { Perm } from "@core/auth/rbac-utils";
+import type { LocalizedText } from "@core/i18n/localized-text";
 
 export type SlotName = string;
 
@@ -12,9 +13,9 @@ export type SlotConfig = {
 
 export type RouteNode = {
   key: string;
-  label?: string;
-  title?: string;                 // Page title
-  subtitle?: string;              // Page subtitle
+  label?: LocalizedText;
+  title?: LocalizedText;                 // Page title
+  subtitle?: LocalizedText;              // Page subtitle
   path: string;                   // dùng cho router + menu
   element?: ReactNode | LazyExoticComponent<() => JSX.Element> | undefined; // nếu bỏ trống → GeneralPage
   icon?: ReactNode;
@@ -36,7 +37,7 @@ export type RouteConfig = {
 
 export type MenuItem = {
   key: string;
-  label?: string;
+  label?: LocalizedText;
   to: string;
   icon?: ReactNode;
   chip?: ReactNode;

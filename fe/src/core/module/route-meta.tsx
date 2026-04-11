@@ -1,11 +1,12 @@
 /* eslint-disable react-refresh/only-export-components */
 import * as React from "react";
+import type { LocalizedText } from "@core/i18n/localized-text";
 
 export type RouteMeta = {
   key: string;
-  label?: string;
-  title?: string;
-  subtitle?: string;
+  label?: LocalizedText;
+  title?: LocalizedText;
+  subtitle?: LocalizedText;
   path: string;
   extra?: Record<string, unknown>;
 };

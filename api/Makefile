@@ -6,7 +6,7 @@ API_SERVICE ?= api
 POSTGRES_SERVICE ?= postgres
 REDIS_SERVICE ?= redis
 
-.PHONY: docker-up docker-log docker-stop docker-down docker-up-prod docker-up-observable docker-up-observable-prod observability-up observability-down migration migration-prod redis-clean redis-clean-prod wait-postgres wait-postgres-prod wait-redis wait-redis-prod
+.PHONY: docker-up docker-log docker-stop docker-restart docker-down docker-up-prod docker-up-observable docker-up-observable-prod observability-up observability-down migration migration-prod redis-clean redis-clean-prod wait-postgres wait-postgres-prod wait-redis wait-redis-prod
 
 docker-up:
 	$(COMPOSE) up --build -d
@@ -16,6 +16,8 @@ docker-log:
 
 docker-stop:
 	$(COMPOSE) stop
+
+docker-restart: docker-stop docker-up
 
 docker-down:
 	$(COMPOSE) down

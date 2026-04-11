@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language code="en" name="English" native_name="English">
+  <resources>
+    <resource key="admin.settings.page_title">Settings</resource>
+    <resource key="admin.settings.page_subtitle">Configure admin page information and Labo UI</resource>
+    <resource key="admin.toolbar.settings.tooltip">Settings</resource>
+  </resources>
+</language>

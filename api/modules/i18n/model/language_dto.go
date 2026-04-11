@@ -33,3 +33,23 @@ type LanguageXMLDocument struct {
 	NativeName string                 `xml:"native_name,attr,omitempty"`
 	Resources  []*LanguageResourceDTO `xml:"resources>resource"`
 }
+
+type LanguageOptionDTO struct {
+	Code       string `json:"code"`
+	Name       string `json:"name"`
+	NativeName string `json:"native_name"`
+	IsDefault  bool   `json:"is_default"`
+}
+
+type CurrentUserLanguageDTO struct {
+	SelectedCode  *string            `json:"selected_code,omitempty"`
+	EffectiveCode string             `json:"effective_code"`
+	Language      *LanguageOptionDTO `json:"language,omitempty"`
+}
+
+type AdminResourcesDTO struct {
+	RequestedCode string             `json:"requested_code,omitempty"`
+	EffectiveCode string             `json:"effective_code"`
+	Language      *LanguageOptionDTO `json:"language,omitempty"`
+	Resources     map[string]string  `json:"resources"`
+}

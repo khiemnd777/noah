@@ -16,6 +16,7 @@ import (
 	"github.com/khiemnd777/noah_api/shared/db/ent/generated"
 	"github.com/khiemnd777/noah_api/shared/middleware/rbac"
 	"github.com/khiemnd777/noah_api/shared/module"
+	"github.com/khiemnd777/noah_api/shared/utils"
 	"github.com/khiemnd777/noah_api/shared/utils/table"
 )
 
@@ -30,6 +31,10 @@ func NewLanguageHandler(svc service.LanguageService, deps *module.ModuleDeps[con
 
 func (h *LanguageHandler) RegisterRoutes(router fiber.Router) {
 	group := router.Group("/languages")
+	app.RouterGet(router, "/active-languages", h.ListActive)
+	app.RouterGet(router, "/me/language", h.GetMyLanguage)
+	app.RouterPut(router, "/me/language", h.UpdateMyLanguage)
+	app.RouterGet(router, "/admin-resources/:code", h.GetAdminResourcesByCode)
 	app.RouterGet(group, "/", h.List)
 	app.RouterGet(group, "/:language_id<int>", h.GetByID)
 	app.RouterPost(group, "/", h.Create)
@@ -37,6 +42,47 @@ func (h *LanguageHandler) RegisterRoutes(router fiber.Router) {
 	app.RouterDelete(group, "/:language_id<int>", h.Delete)
 	app.RouterPost(group, "/:language_id<int>/import-xml", h.ImportXML)
 	app.RouterGet(group, "/:language_id<int>/export-xml", h.ExportXML)
+}
+
+func (h *LanguageHandler) ListActive(c *fiber.Ctx) error {
+	res, err := h.svc.ListActive(c.UserContext())
+	if err != nil {
+		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *LanguageHandler) GetMyLanguage(c *fiber.Ctx) error {
+	userID, _ := utils.GetUserIDInt(c)
+	res, err := h.svc.GetCurrentUserLanguage(c.UserContext(), userID)
+	if err != nil {
+		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *LanguageHandler) UpdateMyLanguage(c *fiber.Ctx) error {
+	userID, _ := utils.GetUserIDInt(c)
+	type request struct {
+		Code string `json:"code"`
+	}
+	var body request
+	if err := c.BodyParser(&body); err != nil {
+		return client_error.ResponseError(c, fiber.StatusBadRequest, err, "invalid request body")
+	}
+	res, err := h.svc.UpdateCurrentUserLanguage(c.UserContext(), userID, body.Code)
+	if err != nil {
+		return client_error.ResponseError(c, fiber.StatusBadRequest, err, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *LanguageHandler) GetAdminResourcesByCode(c *fiber.Ctx) error {
+	res, err := h.svc.GetAdminResourcesByCode(c.UserContext(), c.Params("code"))
+	if err != nil {
+		return client_error.ResponseError(c, fiber.StatusInternalServerError, err, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(res)
 }
 
 func (h *LanguageHandler) List(c *fiber.Ctx) error {

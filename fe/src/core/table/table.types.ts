@@ -71,6 +71,8 @@ export type QROptions = {
 export type ColumnDef<T> = {
   key: keyof T | string;
   header?: LocalizedText;
+  headerIcon?: React.ReactNode;
+  hideHeaderLabel?: boolean;
   width?: number | string;
   type?: ColumnType;
   render?: (row: T) => React.ReactNode;

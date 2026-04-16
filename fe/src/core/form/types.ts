@@ -25,8 +25,7 @@ export type FieldKind =
   | "searchlist"
   | "searchsingle"
   | "metadata"
-  | "relation" // ghost -> searchlist or searchsingle
-  ;
+  | "relation";
 
 export type DeriveMode = "always" | "whenEmpty" | "untilManual";
 
@@ -40,41 +39,34 @@ export type FormContext = {
   reset: () => void;
   setInitial: (obj: Record<string, any>) => void;
   clear: () => void;
-
-  // Event Emitter
   emit: (event: string, payload?: any) => void;
   on: (event: string, handler: (payload: any) => void) => void;
   off: (event: string, handler: (payload: any) => void) => void;
-}
+};
 
-// Password rules
 export type PasswordRules = {
-  minLength?: number;          // default 8
-  maxLength?: number;          // optional
-  requireUpper?: boolean;      // default true
-  requireLower?: boolean;      // default true
-  requireDigit?: boolean;      // default true
-  requireSymbol?: boolean;     // default false
-  disallowSpaces?: boolean;    // default true
-  disallowReuseCurrent?: boolean; // chỉ áp cho change-password, default true
+  minLength?: number;
+  maxLength?: number;
+  requireUpper?: boolean;
+  requireLower?: boolean;
+  requireDigit?: boolean;
+  requireSymbol?: boolean;
+  disallowSpaces?: boolean;
+  disallowReuseCurrent?: boolean;
   custom?: (pw: string, allValues: Record<string, any>) => string | null | undefined;
 };
 
 export type FieldRules = {
-  required?: boolean | string; // true | "custom message"
+  required?: boolean | string;
   minLength?: number;
   maxLength?: number;
-  min?: number; // number/currency
-  max?: number; // number/currency
+  min?: number;
+  max?: number;
   pattern?: RegExp | { regex: RegExp; message?: string };
-  minDateTime?: string; // ISO string
-  maxDateTime?: string; // ISO string
-  custom?: (value: any) => string | null | undefined; // sync: return message if invalid
-
-  // async validation (per-field)
-  // Trả về message lỗi hoặc null/undefined nếu hợp lệ.
+  minDateTime?: string;
+  maxDateTime?: string;
+  custom?: (value: any) => string | null | undefined;
   async?: (value: any, allValues: Record<string, any>) => Promise<string | null | undefined>;
-
 };
 
 export type Option = {
@@ -101,7 +93,6 @@ export type CustomRenderCtx = {
   ctx?: FormContext | null;
 };
 
-// searchlist
 export type SearchListSearchFn = (keyword: string, ctx?: FormContext) => Promise<any[]>;
 export type SearchListSearchPageFn = (
   keyword: string,
@@ -109,19 +100,23 @@ export type SearchListSearchPageFn = (
   limit: number,
   ctx?: FormContext
 ) => Promise<any[]>;
-export type SearchListFetchListFn = (values: Record<string, any>, ctx?: FormContext) => Promise<any[]>;
+export type SearchListFetchListFn = (
+  values: Record<string, any>,
+  ctx?: FormContext
+) => Promise<any[]>;
 export type SearchListHydrateFn = (
   ids: Array<string | number>,
   values: Record<string, any>,
   ctx?: FormContext
 ) => Promise<any[]>;
 
-// metadata def
 export type MiniFieldOverride = {
   name: string;
+  col?: number;
   label?: LocalizedText;
   placeholder?: LocalizedText;
   helperText?: LocalizedText;
+  defaultNowOnInteract?: boolean;
   rules?: FieldRules;
   showIf?: (values: Record<string, any>, ctx?: FormContext) => boolean;
   disableIf?: (values: Record<string, any>, ctx?: FormContext) => boolean;
@@ -131,13 +126,25 @@ export type MiniFieldOverride = {
   onSelect?: (item: any) => void;
   onChange?: (value: any, ctx?: FormContext) => void;
   onInputChange?: (text: string) => void;
-  validate?: (input: string, matched: any | null, ctx?: FormContext | null) => string | null | undefined;
-  validateAsync?: (input: string, matched: any | null, ctx?: FormContext | null) => Promise<string | null | undefined>;
+  validate?: (
+    input: string,
+    matched: any | null,
+    ctx?: FormContext | null
+  ) => string | null | undefined;
+  validateAsync?: (
+    input: string,
+    matched: any | null,
+    ctx?: FormContext | null
+  ) => Promise<string | null | undefined>;
   validateOn?: SearchSingleValidateTrigger | SearchSingleValidateTrigger[];
-  onValidate?: (message: string | null, input: string, matched: any | null, ctx?: FormContext | null) => void;
+  onValidate?: (
+    message: string | null,
+    input: string,
+    matched: any | null,
+    ctx?: FormContext | null
+  ) => void;
   onDragEnd?: (items: any[]) => void;
 
-  // searchlist, autocomplete, relation
   where?: (values: Record<string, any>, ctx?: FormContext) => string[];
   searchPage?: SearchListSearchPageFn;
   fetchOne?: (values: Record<string, any>) => Promise<any | null>;
@@ -148,96 +155,102 @@ export type MiniFieldOverride = {
   renderItem?: (item: any, index?: number) => React.ReactNode;
 };
 
+export type MetadataFieldPlacement = {
+  group: string;
+  section?: string;
+  fields?: string[];
+};
 
 export type FieldDef = {
   name: string;
   altName?: string;
   label: LocalizedText;
   kind: FieldKind;
-  group?: string;                                                           // default: "general"
+  group?: string;
+  section?: string;
+  col?: number;
   placeholder?: LocalizedText;
-  rows?: number;                                                            // for textarea
+  rows?: number;
   defaultValue?: any;
+  defaultNowOnInteract?: boolean;
   helperText?: LocalizedText;
   fullWidth?: boolean;
   size?: "small" | "medium";
   rules?: FieldRules;
   qr?: QROptions;
-  step?: number;                                                            // for number
+  step?: number;
   showIf?: (values: Record<string, any>, ctx?: FormContext) => boolean;
   disableIf?: (values: Record<string, any>, ctx?: FormContext) => boolean;
   asTextFn?: (values: Record<string, any>, ctx?: FormContext) => boolean;
-  asText?: boolean;                                                         // readonly text mode
+  asText?: boolean;
 
-  // select / multiselect / autocomplete
-  options?: Option[];                                                       // for select
-  loadOptions?: (keyword: string) => Promise<Option[]>;                     // async loader cho autocomplete
-  freeSolo?: boolean;                                                       // autocomplete free text
-  multiple?: boolean;                                                       // multiselect flag
-  debounceMs?: number;                                                      // debounce for async option loading
+  options?: Option[];
+  loadOptions?: (keyword: string) => Promise<Option[]>;
+  freeSolo?: boolean;
+  multiple?: boolean;
+  debounceMs?: number;
 
-  // fileupload | imageupload
-  accept?: string;                                                          // ví dụ: "image/*,.pdf"
-  uploader?: (files: File[]) => Promise<string[]>;                          // trả về URLs sau upload
+  accept?: string;
+  uploader?: (files: File[]) => Promise<string[]>;
   maxFiles?: number;
-  multipleFiles?: boolean;                                                  // nếu không set, suy ra từ rules.required hoặc defaultValue
+  multipleFiles?: boolean;
+  imagePreviewAspectRatio?: string;
+  imagePreviewHeight?: number;
 
-  // password
   passwordRules?: PasswordRules;
-  // change-password labels
-  currentLabel?: LocalizedText;  // default: "Mật khẩu hiện tại"
-  newLabel?: LocalizedText;      // default: "Mật khẩu mới" (hoặc "Mật khẩu" cho new-password)
-  confirmLabel?: LocalizedText;  // default: "Xác nhận mật khẩu mới" / "Xác nhận mật khẩu"
+  currentLabel?: LocalizedText;
+  newLabel?: LocalizedText;
+  confirmLabel?: LocalizedText;
 
-  // custom
   render?: (ctx: CustomRenderCtx) => React.ReactNode;
   normalizeInitial?: (value: any, allValues?: Record<string, any>) => any;
 
-  // derive value từ field khác (vd: fullname -> slug)
   derive?: {
-    /** Field nguồn (vd: "fullname") */
     field: string;
-    /** Ánh xạ từ giá trị nguồn -> giá trị đích */
     map: (sourceValue: any, values: Record<string, any>) => any;
-    /** Cơ chế ghi đè:
-     *  - "always": luôn sync theo nguồn
-     *  - "whenEmpty": chỉ điền nếu hiện đang rỗng
-     *  - "untilManual": tự động cho đến khi người dùng chỉnh tay field đích
-     **/
-    mode?: DeriveMode; // default: "untilManual"
+    mode?: DeriveMode;
   };
 
-  // searchlist
   where?: (values: Record<string, any>, ctx?: FormContext) => string[];
-  search?: SearchListSearchFn;                                   // search(kw): T[]
-  searchPage?: SearchListSearchPageFn;                           // searchPage(kw, page, limit): T[]
-  fetchList?: SearchListFetchListFn;                             // hydrate list hiện có theo ngữ cảnh (values): T[]
-  hydrateByIds?: SearchListHydrateFn;                            // map IDs -> T[] khi field đã có sẵn IDs
+  search?: SearchListSearchFn;
+  searchPage?: SearchListSearchPageFn;
+  fetchList?: SearchListFetchListFn;
+  hydrateByIds?: SearchListHydrateFn;
   resolveDefaultInput?: (
     values: Record<string, any>,
     ctx?: FormContext
   ) => Promise<{ inputValue?: string; value?: any | null } | null>;
   onSelect?: (item: any) => void;
   onBlur?: (text: string, matched: any, ctx?: FormContext | null) => void;
-  onAdd?: (item: any) => Promise<void> | void;                   // khi add item từ search
+  onAdd?: (item: any) => Promise<void> | void;
   onDelete?: (item: any) => Promise<void> | void;
   onDragEnd?: (items: any[]) => void;
-  // Extractors (áp dụng cho searchlist)
-  getOptionLabel?: (item: any, items?: any[]) => string;                        // T -> label
-  getOptionValue?: (item: any) => string | number;               // T -> ID
+  getOptionLabel?: (item: any, items?: any[]) => string;
+  getOptionValue?: (item: any) => string | number;
   getInputLabel?: (item: any) => string;
   prop?: string;
 
-  // searchsingle
   allowUnmatched?: boolean;
   fetchOne?: (values: Record<string, any>) => Promise<any | null>;
   hydrateById?: (id: string | number, values: Record<string, any>) => Promise<any | null>;
-  validate?: (input: string, matched: any | null, ctx?: FormContext | null) => string | null | undefined;
-  validateAsync?: (input: string, matched: any | null, ctx?: FormContext | null) => Promise<string | null | undefined>;
+  validate?: (
+    input: string,
+    matched: any | null,
+    ctx?: FormContext | null
+  ) => string | null | undefined;
+  validateAsync?: (
+    input: string,
+    matched: any | null,
+    ctx?: FormContext | null
+  ) => Promise<string | null | undefined>;
   validateOn?: SearchSingleValidateTrigger | SearchSingleValidateTrigger[];
-  onValidate?: (message: string | null, input: string, matched: any | null, ctx?: FormContext | null) => void;
+  onValidate?: (
+    message: string | null,
+    input: string,
+    matched: any | null,
+    ctx?: FormContext | null
+  ) => void;
 
-  // metadata
   metadata?: {
     collection?: string;
     collectionFn?: (ctx: FormContext) => string;
@@ -247,31 +260,29 @@ export type FieldDef = {
     fields?: string[];
     ignoreFields?: string[];
     showIfFields?: string[];
-    groups?: { group: string; fields?: string[]; }[];
+    groups?: MetadataFieldPlacement[];
     def?: MiniFieldOverride[];
   };
 
-  // UI render item (không chứa nút delete)
   renderItem?: (item: any, index?: number) => React.ReactNode;
 
-  // Behavior
-  allowDuplicate?: boolean;                                      // default false (ẩn item đã chọn)
-  dedupeFn?: (a: any, b: any) => boolean;                        // custom so sánh
+  allowDuplicate?: boolean;
+  dedupeFn?: (a: any, b: any) => boolean;
   maxItems?: number;
   disableDelete?: (item: any) => boolean;
 
-  // Create flow via FormDialog
-  onOpenCreate?: () => void;                                     // mở FormDialog tạo mới
-  refreshKey?: any;                                              // trigger refetch list hiện có
-  autoLoadAllOnMount?: boolean;                                  // rỗng → load ALL ngay từ mount (default false)
+  onOpenCreate?: () => void;
+  refreshKey?: any;
+  autoLoadAllOnMount?: boolean;
   pageLimit?: number;
   hydrateOrderField?: string;
 
-  // equation
-  currencyEquation?: string; // price_original * vat
+  currencyEquation?: string;
 };
 
 export type AutoFormOptions = {
-  asyncValidate?: (values: Record<string, any>) => Promise<Partial<Record<string, string | null>>>;
+  asyncValidate?: (
+    values: Record<string, any>
+  ) => Promise<Partial<Record<string, string | null>>>;
   asyncDebounceMs?: number;
 };

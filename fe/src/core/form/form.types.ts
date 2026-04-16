@@ -45,18 +45,40 @@ export type ModeText =
   | { create: LocalizedText; update: LocalizedText }
   | ((ctx: { mode: FormMode; values: any; result?: any }) => LocalizedText);
 
-export type GroupConfig = { name: string; label?: string; col?: number };
+export type GroupSectionConfig = {
+  name: string;
+  label?: string;
+  col?: number;
+};
+
+export type GroupConfig = {
+  name: string;
+  label?: string;
+  col?: number;
+  sections?: GroupSectionConfig[];
+};
+
+export type GroupSectionPlacement = GroupSectionConfig & {
+  fields: FieldDef[];
+  isFallback?: boolean;
+};
+
+export type GroupPlacement = Omit<GroupConfig, "sections"> & {
+  rootFields: FieldDef[];
+  sections: GroupSectionPlacement[];
+  isFallback?: boolean;
+};
 
 export type SubmitButton = {
   name: string;
   label?: LocalizedText;
   color?:
-  | "primary"
-  | "secondary"
-  | "error"
-  | "warning"
-  | "info"
-  | "success";
+    | "primary"
+    | "secondary"
+    | "error"
+    | "warning"
+    | "info"
+    | "success";
 
   icon?: React.ReactNode;
 
@@ -81,31 +103,35 @@ export type FormSchema = {
   submit?: SubmitDef | { create: SubmitDef | null; update: SubmitDef | null };
   submitButtons?: SubmitButton[];
   mergeSubmitButtons?: boolean;
-  idField?: string; // mặc định "id"
+  idField?: string;
   modeResolver?: (initial: Record<string, any>) => FormMode;
   hooks?: FormHooks;
   toasts?: {
-    saved?: ModeText;   // vd: "Lưu xong!" | { create:"Tạo xong!", update:"Cập nhật xong!" } | (ctx)=>string
+    saved?: ModeText;
     failed?: ModeText;
   };
 
   showReset?: boolean;
-  initialResolver?: (initial?: any) => Promise<Record<string, any> | null> | Record<string, any> | null;
+  initialResolver?:
+    | ((initial?: any) => Promise<Record<string, any> | null>)
+    | ((initial?: any) => Record<string, any> | null);
   afterSaved?: (result: any, ctx?: any) => Promise<void> | void;
 
-  onChange?: (name: string, value: any, ctx: {
-    values: Record<string, any>;
-    setValue: (name: string, v: any) => void;
-    setAllValues: (obj: Record<string, any>) => void;
-    reset: () => void;
-    // Event Emitter
-    emit: (event: string, payload?: any) => void;
-    on: (event: string, handler: (payload: any) => void) => void;
-    off: (event: string, handler: (payload: any) => void) => void;
-  }, source: "user" | "programmatic") => void;
+  onChange?: (
+    name: string,
+    value: any,
+    ctx: {
+      values: Record<string, any>;
+      setValue: (name: string, v: any) => void;
+      setAllValues: (obj: Record<string, any>) => void;
+      reset: () => void;
+      emit: (event: string, payload?: any) => void;
+      on: (event: string, handler: (payload: any) => void) => void;
+      off: (event: string, handler: (payload: any) => void) => void;
+    },
+    source: "user" | "programmatic"
+  ) => void;
 
-
-  // Groups
   groups?: GroupConfig[] | null;
 };
 
@@ -121,8 +147,8 @@ export type AutoFormRef = {
   values: Record<string, any>;
   submit: () => Promise<boolean>;
   runSubmitButton: (btn: SubmitButton, mode: FormMode) => Promise<boolean>;
-  getSubmitButtons: () => SubmitButton[]
+  getSubmitButtons: () => SubmitButton[];
   reset: () => void;
   setValue: (name: string, v: any) => void;
-  setAllValues: (obj: Record<string, any>) => void
+  setAllValues: (obj: Record<string, any>) => void;
 };

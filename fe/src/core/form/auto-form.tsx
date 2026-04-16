@@ -10,6 +10,9 @@ import type {
   AutoFormProps,
   FormSchema,
   FormMode,
+  GroupConfig,
+  GroupPlacement,
+  GroupSectionPlacement,
   ModeText,
   SubmitButton,
 } from "@core/form/form.types";
@@ -29,7 +32,7 @@ import {
 import { snakeToCamel } from "@root/shared/utils/string.utils";
 import { isJSON, parseJSON } from "@root/shared/utils/json.utils";
 import { parseShowIfDependencies } from "@root/shared/metadata/utils";
-import { rel1, relM2m, search } from "../relation/relation.api";
+import { relM2m, search } from "../relation/relation.api";
 import { openFormDialog } from "./form-dialog.service";
 import { extractVars } from "@root/shared/utils/equation.utils";
 import { parseIntSafe } from "@root/shared/utils/number.utils";
@@ -106,12 +109,12 @@ async function expandMetadataBlock(
   if (!metadata?.group) {
     const derivedMeta = metadata?.collectionFn
       ? {
-        ...metaField,
-        metadata: {
-          ...metadata,
-          collection: resolveMetadataCollection(metaField, ctx) ?? undefined,
-        },
-      }
+          ...metaField,
+          metadata: {
+            ...metadata,
+            collection: resolveMetadataCollection(metaField, ctx) ?? undefined,
+          },
+        }
       : metaField;
     return expandOneMetadataBlock(derivedMeta, values, changedDeps, ctx);
   }
@@ -158,6 +161,7 @@ async function expandOneMetadataBlock(
   if (!collection) {
     return { fields: [], deps: [], collections: [] };
   }
+
   const params = changedDeps.map((dep) => ({
     field: dep,
     value: values[dep],
@@ -175,7 +179,6 @@ async function expandOneMetadataBlock(
 
   if (!coll) return { fields: [], deps: [], collections: [] };
 
-  // parse showIf deps
   let deps: string[] = [];
   if (coll.showIf && isJSON(coll.showIf)) {
     deps = parseShowIfDependencies(coll.showIf);
@@ -212,12 +215,12 @@ async function expandOneMetadataBlock(
 
   for (const mf of fieldsToUse ?? []) {
     const kind = mapMetadataFieldTypeToFieldKind(mf.type);
-    const group = resolveMetadataFieldGroup(metaField, mf.name);
+    const placement = resolveMetadataFieldPlacement(metaField, mf.name);
 
     if (kind === "currency-equation") {
       const prop = metaField.prop;
-      const cfPrefix = prop ? `${prop}.customFields` : `customFields`;
-      const override = metaField.metadata?.def?.find(d => d.name === mf.name);
+      const cfPrefix = prop ? `${prop}.customFields` : "customFields";
+      const override = metaField.metadata?.def?.find((d) => d.name === mf.name);
       const fd: FieldDef = {
         prop,
         kind: "currency-equation",
@@ -225,7 +228,8 @@ async function expandOneMetadataBlock(
         label: mf.label ?? mf.name,
         currencyEquation: snakeToCamel(mf.defaultValue ?? ""),
         fullWidth: true,
-        group,
+        group: placement.group,
+        section: placement.section,
         rules: mergeMetadataRules(mf.required, override?.rules),
       };
       if (override) {
@@ -238,9 +242,9 @@ async function expandOneMetadataBlock(
 
     if (kind === "select") {
       const prop = metaField.prop;
-      const cfPrefix = prop ? `${prop}.customFields` : `customFields`;
+      const cfPrefix = prop ? `${prop}.customFields` : "customFields";
       const opts = isJSON(mf.options ?? "") ? parseJSON(mf.options ?? "[]") : [];
-      const override = metaField.metadata?.def?.find(d => d.name === mf.name);
+      const override = metaField.metadata?.def?.find((d) => d.name === mf.name);
       const fd: FieldDef = {
         prop,
         kind: "select",
@@ -248,7 +252,8 @@ async function expandOneMetadataBlock(
         label: mf.label ?? mf.name,
         options: opts,
         fullWidth: true,
-        group,
+        group: placement.group,
+        section: placement.section,
         rules: mergeMetadataRules(mf.required, override?.rules),
       };
       if (override) {
@@ -261,30 +266,35 @@ async function expandOneMetadataBlock(
 
     if (kind === "relation") {
       const prop = metaField.prop;
-      const relPrefix = prop ? `${prop}.relationFields` : `relationFields`;
-      const altPrefix = prop ? `${prop}.customFields` : `customFields`;
+      const relPrefix = prop ? `${prop}.relationFields` : "relationFields";
+      const altPrefix = prop ? `${prop}.customFields` : "customFields";
       const relation = isJSON(mf.relation ?? "") ? parseJSON(mf.relation ?? "{}") : {};
-      const singleChoice = relation.type && relation.type === '1';
+      const singleChoice = relation.type && relation.type === "1";
       const frmDlgKey = relation.form ?? relation.ref;
-      const override = metaField.metadata?.def?.find(d => d.name === mf.name);
+      const override = metaField.metadata?.def?.find((d) => d.name === mf.name);
 
       if (singleChoice) {
         const requiredRule = override?.rules?.required;
         const requiredMsg =
           requiredRule !== undefined
-            ? (requiredRule ? (typeof requiredRule === "string" ? requiredRule : "This field is required") : null)
+            ? (requiredRule
+                ? (typeof requiredRule === "string" ? requiredRule : "This field is required")
+                : null)
             : (mf.required ? "This field is required" : null);
+
         const staticWhere =
           relation.where != null
             ? (Array.isArray(relation.where) ? relation.where : [relation.where])
             : [];
+
         const fd: FieldDef = {
           prop,
           kind: "searchsingle",
           name: `${relPrefix}.${mf.name}`,
           altName: `${altPrefix}.${mf.name}`,
           label: mf.label ?? mf.name,
-          group,
+          group: placement.group,
+          section: placement.section,
           placeholder: relation.placeholer ?? "",
           fullWidth: true,
           onSelect: metaField.onSelect,
@@ -297,42 +307,81 @@ async function expandOneMetadataBlock(
             const extendWhere = dynamicWhere.length > 0
               ? [...staticWhere, ...dynamicWhere]
               : (staticWhere.length > 0 ? staticWhere : undefined);
+
             const searched = await search(relation.target, {
               keyword: kw,
-              page: page,
-              limit: limit,
+              page,
+              limit,
               orderBy: "name",
               extendWhere,
             });
+
             return searched.items;
           },
 
           pageLimit: 20,
 
-          async hydrateById(id: number | string, _: Record<string, any>) {
+          async hydrateById(id: number | string, values: Record<string, any>) {
             if (!id) return null;
-            const found = await rel1(relation.target, id as number);
-            return found ?? null;
+
+            const dynamicWhere = fd.where?.(values ?? {}, undefined) ?? [];
+            const extendWhere = [
+              ...staticWhere,
+              ...dynamicWhere,
+              `id=${id}`,
+            ];
+
+            const found = await search(relation.target, {
+              keyword: "",
+              page: 1,
+              limit: 1,
+              orderBy: "name",
+              extendWhere,
+            });
+
+            return found.items?.[0] ?? null;
           },
 
           async fetchOne(values: Record<string, any>) {
             const refName = `${relPrefix}.${mf.name}`;
-            const refId = parseIntSafe(values[refName]);
+            const altRefName = `${altPrefix}.${mf.name}`;
+            const rawRefId = values[refName] ?? values[altRefName];
+            const refId = Array.isArray(rawRefId)
+              ? parseIntSafe(rawRefId[0])
+              : parseIntSafe(rawRefId);
+
             if (!refId) return null;
-            return await rel1(relation.target, refId);
+
+            const dynamicWhere = fd.where?.(values ?? {}, undefined) ?? [];
+            const extendWhere = [
+              ...staticWhere,
+              ...dynamicWhere,
+              `id=${refId}`,
+            ];
+
+            const found = await search(relation.target, {
+              keyword: "",
+              page: 1,
+              limit: 1,
+              orderBy: "name",
+              extendWhere,
+            });
+
+            return found.items?.[0] ?? null;
           },
 
-          // renderItem: (d: any) => (<>{d?.name}</>),
-          // disableDelete: (d: any) => d?.locked === true,
           autoLoadAllOnMount: true,
         };
+
         if (relation.form) {
           fd.onOpenCreate = () => openFormDialog(frmDlgKey);
         }
+
         if (override) {
           const { name: _omit, rules: _omitRules, ...rest } = override;
           Object.assign(fd, rest);
         }
+
         if (requiredMsg) {
           const baseValidate = fd.validate;
           const allowUnmatched = fd.allowUnmatched ?? false;
@@ -345,19 +394,21 @@ async function expandOneMetadataBlock(
             return baseValidate ? baseValidate(input, matched, ctx) ?? null : null;
           };
         }
+
         out.push(fd);
       } else {
-        const override = metaField.metadata?.def?.find(d => d.name === mf.name);
         const staticWhere =
           relation.where != null
             ? (Array.isArray(relation.where) ? relation.where : [relation.where])
             : [];
+
         let fd: FieldDef = {
           prop,
           kind: "searchlist",
           name: `${relPrefix}.${mf.name}`,
           label: mf.label ?? mf.name,
-          group,
+          group: placement.group,
+          section: placement.section,
           placeholder: relation.placeholer ?? "",
           fullWidth: true,
           onSelect: metaField.onSelect,
@@ -370,13 +421,15 @@ async function expandOneMetadataBlock(
             const extendWhere = dynamicWhere.length > 0
               ? [...staticWhere, ...dynamicWhere]
               : (staticWhere.length > 0 ? staticWhere : undefined);
+
             const searched = await search(relation.target, {
               keyword: kw,
-              page: page,
-              limit: limit,
+              page,
+              limit,
               orderBy: "name",
               extendWhere,
             });
+
             return searched.items;
           },
 
@@ -406,13 +459,16 @@ async function expandOneMetadataBlock(
           disableDelete: (d: any) => d?.locked === true,
           autoLoadAllOnMount: true,
         };
+
         if (relation.form) {
           fd.onOpenCreate = () => openFormDialog(frmDlgKey);
         }
+
         if (override) {
           const { name: _omit, renderItem: _omitRenderItem, rules: _omitRules, ...rest } = override;
           Object.assign(fd, rest);
         }
+
         out.push(fd);
       }
 
@@ -420,21 +476,24 @@ async function expandOneMetadataBlock(
     }
 
     const prop = metaField.prop;
-    const cfPrefix = prop ? `${prop}.customFields` : `customFields`;
-    const override = metaField.metadata?.def?.find(d => d.name === mf.name);
-    let fd: FieldDef = {
+    const cfPrefix = prop ? `${prop}.customFields` : "customFields";
+    const override = metaField.metadata?.def?.find((d) => d.name === mf.name);
+    const fd: FieldDef = {
       prop,
       kind,
       name: `${cfPrefix}.${mf.name}`,
       label: mf.label ?? mf.name,
       fullWidth: true,
       rules: mergeMetadataRules(mf.required, override?.rules),
-      group,
+      group: placement.group,
+      section: placement.section,
     };
+
     if (override) {
       const { name: _omit, ...rest } = override;
       Object.assign(fd, rest);
     }
+
     out.push(fd);
   }
 
@@ -445,37 +504,117 @@ async function expandOneMetadataBlock(
   };
 }
 
-/* ========================================================================
-   HELPERS
-   ======================================================================== */
-// const defaultFetcher = (input: string, init: RequestInit) => fetch(input, init);
-
-function resolveMetadataFieldGroup(
+function resolveMetadataFieldPlacement(
   metaField: FieldDef,
   fieldName: string
-): string {
+): { group: string; section?: string } {
   const groups = metaField.metadata?.groups;
   if (!groups || groups.length === 0) {
-    return metaField.group ?? "general";
+    return {
+      group: metaField.group ?? "general",
+      section: metaField.section,
+    };
   }
 
-  let fallbackGroup: string | null = null;
+  let fallbackPlacement: { group: string; section?: string } | null = null;
 
   for (const g of groups) {
     if (Array.isArray(g.fields) && g.fields.length > 0) {
       if (g.fields.includes(`customFields.${fieldName}`) || g.fields.includes(fieldName)) {
-        return g.group;
+        return {
+          group: g.group,
+          section: g.section,
+        };
       }
     }
 
     if (!g.fields || g.fields.length === 0) {
-      fallbackGroup = g.group;
+      fallbackPlacement = {
+        group: g.group,
+        section: g.section,
+      };
     }
   }
 
-  if (fallbackGroup) return fallbackGroup;
+  if (fallbackPlacement) return fallbackPlacement;
 
-  return metaField.group ?? "general";
+  return {
+    group: metaField.group ?? "general",
+    section: metaField.section,
+  };
+}
+
+function buildGroupPlacements(
+  fields: FieldDef[],
+  groupsConfig: GroupConfig[],
+): GroupPlacement[] {
+  const groupOrder: string[] = [];
+  const groups = new Map<
+    string,
+    GroupPlacement & { sectionsMap: Map<string, GroupSectionPlacement> }
+  >();
+
+  const ensureGroup = (name: string, config?: GroupConfig, isFallback = false) => {
+    let group = groups.get(name);
+    if (!group) {
+      group = {
+        name,
+        label: config?.label,
+        col: config?.col,
+        sections: [],
+        rootFields: [],
+        sectionsMap: new Map(),
+        isFallback,
+      };
+
+      groups.set(name, group);
+      groupOrder.push(name);
+
+      for (const sectionConfig of config?.sections ?? []) {
+        const sectionPlacement: GroupSectionPlacement = {
+          ...sectionConfig,
+          fields: [],
+        };
+        group.sections.push(sectionPlacement);
+        group.sectionsMap.set(sectionConfig.name, sectionPlacement);
+      }
+    }
+
+    return group;
+  };
+
+  for (const config of groupsConfig) {
+    ensureGroup(config.name, config);
+  }
+
+  for (const field of fields) {
+    const groupName = field.group ?? "general";
+    const group = ensureGroup(groupName, undefined, true);
+
+    if (!field.section) {
+      group.rootFields.push(field);
+      continue;
+    }
+
+    let section = group.sectionsMap.get(field.section);
+    if (!section) {
+      section = {
+        name: field.section,
+        col: group.col,
+        fields: [],
+        isFallback: true,
+      };
+      group.sections.push(section);
+      group.sectionsMap.set(field.section, section);
+    }
+
+    section.fields.push(field);
+  }
+
+  return groupOrder.map((name) => {
+    const { sectionsMap: _sectionsMap, ...group } = groups.get(name)!;
+    return group;
+  });
 }
 
 function mergeMetadataRules(
@@ -490,7 +629,6 @@ function mergeMetadataRules(
 function flattenInitialRecursive(obj: any, prefix: string, out: any) {
   if (!obj || typeof obj !== "object") return;
 
-  // flatten custom_fields → prefix.customFields.*
   if (obj.custom_fields && typeof obj.custom_fields === "object") {
     for (const [k, v] of Object.entries(obj.custom_fields)) {
       const camel = snakeToCamel(k);
@@ -498,14 +636,12 @@ function flattenInitialRecursive(obj: any, prefix: string, out: any) {
     }
   }
 
-  // flatten customFields → prefix.customFields.*
   if (obj.customFields && typeof obj.customFields === "object") {
     for (const [k, v] of Object.entries(obj.customFields)) {
       out[`${prefix}.customFields.${k}`] = v;
     }
   }
 
-  // flatten relation_fields → prefix.relationFields.*
   if (obj.relation_fields && typeof obj.relation_fields === "object") {
     for (const [k, v] of Object.entries(obj.relation_fields)) {
       const camel = snakeToCamel(k);
@@ -531,7 +667,6 @@ function flattenInitialRecursive(obj: any, prefix: string, out: any) {
     }
   }
 
-  // flatten NORMAL FIELDS
   for (const [k, v] of Object.entries(obj)) {
     if (
       k === "custom_fields" ||
@@ -545,28 +680,23 @@ function flattenInitialRecursive(obj: any, prefix: string, out: any) {
     const camel = snakeToCamel(k);
     const key = `${prefix}.${camel}`;
 
-    // 1️⃣ primitive → flatten
     if (typeof v !== "object" || v === null) {
       out[key] = v;
       continue;
     }
 
-    // 2️⃣ array → keep as-is
     if (Array.isArray(v)) {
       out[key] = v;
       continue;
     }
 
-    // 3️⃣ plain object → recurse
     flattenInitialRecursive(v, key, out);
   }
 }
 
-// deprecated
 export function flattenInitialRecursive2(obj: any, prefix: string, out: any) {
   if (!obj || typeof obj !== "object") return;
 
-  // flatten custom_fields → prefix.customFields.*
   if (obj.custom_fields && typeof obj.custom_fields === "object") {
     for (const [k, v] of Object.entries(obj.custom_fields)) {
       const camel = snakeToCamel(k);
@@ -574,14 +704,12 @@ export function flattenInitialRecursive2(obj: any, prefix: string, out: any) {
     }
   }
 
-  // flatten customFields → prefix.customFields.*
   if (obj.customFields && typeof obj.customFields === "object") {
     for (const [k, v] of Object.entries(obj.customFields)) {
       out[`${prefix}.customFields.${k}`] = v;
     }
   }
 
-  // flatten relation_fields → prefix.relationFields.*
   if (obj.relation_fields && typeof obj.relation_fields === "object") {
     for (const [k, v] of Object.entries(obj.relation_fields)) {
       const camel = snakeToCamel(k);
@@ -589,9 +717,9 @@ export function flattenInitialRecursive2(obj: any, prefix: string, out: any) {
       const rootKey = prefix ? `${prefix}.${camel}` : camel;
       const cfKey = prefix ? `${prefix}.customFields.${camel}` : `customFields.${camel}`;
 
-      out[relKey] = v;   // relationFields.xxx
-      out[rootKey] = v;  // xxx
-      out[cfKey] = v;    // customFields.xxx
+      out[relKey] = v;
+      out[rootKey] = v;
+      out[cfKey] = v;
     }
   }
 
@@ -607,20 +735,23 @@ export function flattenInitialRecursive2(obj: any, prefix: string, out: any) {
     }
   }
 
-  // flatten NORMAL FIELDS: id, code, createdAt, updatedAt, ...
   for (const [k, v] of Object.entries(obj)) {
-    // ignore nested groups already handled
-    if (k === "custom_fields" || k === "customFields" || k === "relation_fields" || k === "relationFields") continue;
+    if (
+      k === "custom_fields" ||
+      k === "customFields" ||
+      k === "relation_fields" ||
+      k === "relationFields"
+    ) {
+      continue;
+    }
 
     const camel = snakeToCamel(k);
 
-    // primitive values → flatten to prefix.camel
     if (typeof v !== "object" || v === null) {
       out[`${prefix}.${camel}`] = v;
       continue;
     }
 
-    // nested object → recurse
     flattenInitialRecursive(v, `${prefix}.${camel}`, out);
   }
 }
@@ -632,12 +763,6 @@ function resolveMode(schema: FormSchema, initialVals: any): FormMode {
   return id ? "update" : "create";
 }
 
-// function pickSubmit(schema: FormSchema, mode: FormMode): SubmitDef {
-//   const s = schema.submit as any;
-//   if (s?.create && s?.update) return mode === "create" ? s.create : s.update;
-//   return schema.submit as SubmitDef;
-// }
-
 function renderModeText(
   t?: ModeText,
   ctx?: { mode: FormMode; values: any; result?: any }
@@ -647,35 +772,6 @@ function renderModeText(
   if (typeof t === "function") return t(ctx!);
   return t[ctx!.mode];
 }
-
-// async function runSubmit(def: SubmitDef, dto: any, meta?: { meta: FieldDef; fields: FieldDef[]; deps: string[] }[]) {
-//   if (def.type === "fn") return def.run(dto, meta);
-
-//   const method = def.method ?? "PATCH";
-//   const fetcher = def.fetcher ?? defaultFetcher;
-
-//   let payload = def.transform ? def.transform(dto) : dto;
-
-//   const res = await fetcher(def.url, {
-//     method,
-//     headers: {
-//       "Content-Type": "application/json",
-//       ...(def.headers ?? {}),
-//     },
-//     body: JSON.stringify(payload),
-//   });
-
-//   if (!res.ok) {
-//     let msg = `HTTP ${res.status}`;
-//     try {
-//       const json = await res.json();
-//       msg = json?.message || msg;
-//     } catch { }
-//     throw new Error(msg);
-//   }
-
-//   return res.json().catch(() => null);
-// }
 
 function flattenForInitial(obj: any): any {
   const out: any = { ...obj };
@@ -689,16 +785,9 @@ function flattenForInitial(obj: any): any {
   return out;
 }
 
-/* ========================================================================
-   AUTOFORM FINAL
-   ======================================================================== */
 type Props = AutoFormProps & {
   name?: string;
   notifier?: typeof toast;
-};
-
-const EMPTY_FORM_SCHEMA: FormSchema = {
-  fields: [],
 };
 
 export const AutoForm = React.forwardRef<AutoFormRef, Props>(
@@ -706,15 +795,15 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     const { t } = useI18n();
     const toasts = notifier ?? toast;
 
-    /* LOAD SCHEMA */
     const schema = React.useMemo(() => {
       if (schemaProp) return schemaProp;
       if (name) return getFormSchema(name);
       return null;
     }, [schemaProp, name]);
-    const resolvedSchema = schema ?? EMPTY_FORM_SCHEMA;
 
-    /* RESOLVE INITIAL */
+    if (!schema) return <div>Schema {name} chưa đăng ký.</div>;
+    const resolvedSchema = schema;
+
     const [resolvedInitial, setResolvedInitial] = React.useState(initial ?? {});
     const [resolvingInitial, setResolvingInitial] = React.useState(false);
 
@@ -739,14 +828,11 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
               ? { ...initial, ...resolved }
               : resolved ?? initial ?? {};
 
-          // ==========================================
-          // FLATTEN ALL NESTED PROPS (custom_fields + relation_fields)
-          // ==========================================
           const flattenOut: any = { ...finalInitial };
 
           for (const [k, v] of Object.entries(finalInitial)) {
             if (typeof v === "object" && v !== null) {
-              flattenInitialRecursive(v, snakeToCamel(k), flattenOut)
+              flattenInitialRecursive(v, snakeToCamel(k), flattenOut);
             }
           }
 
@@ -754,13 +840,14 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
             setResolvedInitial(flattenOut);
             setAllValues(flattenOut);
           }
-
         } finally {
           if (!cancelled) setResolvingInitial(false);
         }
       })();
 
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [initial, resolvedSchema]);
 
     const initialValues = resolvedInitial ?? {};
@@ -770,7 +857,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       setAllValues(initialValues);
     }, [resolvingInitial, initialValues]);
 
-    /* METADATA BLOCKS – PERSISTENT */
     const metadataBlocksRef = React.useRef<
       { meta: FieldDef; fields: FieldDef[]; deps: string[]; collections: string[] }[]
     >([]);
@@ -787,13 +873,12 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     }
 
     const metadataBlocks = metadataBlocksRef.current;
-
-    /* FINAL FIELDS*/
     const [metadataVersion, setMetadataVersion] = React.useState(0);
 
     const finalFields = React.useMemo(() => {
       const arr: FieldDef[] = [];
       const metadataMap = new Map<FieldDef, FieldDef[]>();
+
       metadataBlocksRef.current.forEach((b) => {
         metadataMap.set(b.meta, b.fields);
       });
@@ -802,60 +887,36 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
         if (f.kind === "metadata") {
           const fields = metadataMap.get(f) ?? [];
           arr.push(...fields);
+        } else if (f.prop) {
+          arr.push({
+            ...f,
+            name: `${f.prop}.${f.name}`,
+          });
         } else {
-          if (f.prop) {
-            arr.push({
-              ...f,
-              name: `${f.prop}.${f.name}`
-            })
-          } else {
-            arr.push(f);
-          }
+          arr.push(f);
         }
       }
+
       return arr;
     }, [metadataVersion, resolvedSchema.fields]);
 
-    // ========================================
-    // GROUP ENGINE
-    // ========================================
     const groupsConfig = resolvedSchema.groups ?? [{ name: "general", col: 1 }];
 
-    // gom field theo group
-    const groupMap = React.useMemo(() => {
-      const map = new Map<string, FieldDef[]>();
+    const groups = React.useMemo(
+      () => buildGroupPlacements(finalFields, groupsConfig),
+      [finalFields, groupsConfig]
+    );
 
-      // init map theo groupsConfig
-      for (const g of groupsConfig) map.set(g.name, []);
-
-      // fallback cho field.group không nằm trong config
-      const ensureGroup = (name: string) => {
-        if (!map.has(name)) map.set(name, []);
-      };
-
-      for (const f of finalFields) {
-        const gname = f.group ?? "general";
-        ensureGroup(gname);
-        map.get(gname)!.push(f);
-      }
-
-      return map;
-    }, [finalFields, groupsConfig]);
-
-
-    /* NON-METADATA FIELDS */
     const baseFields = React.useMemo(
       () => resolvedSchema.fields.filter((f) => f.kind !== "metadata"),
       [resolvedSchema.fields]
     );
 
-    /* MAIN FORM STATE */
     const {
       values,
       setValue,
       setAllValues,
       errors,
-      // setErrors,
       setFieldError,
       validateAll,
     } = useAutoForm(baseFields, initialValues, {
@@ -864,9 +925,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
     const ctxRef = React.useRef<FormContext>(null);
 
-    // ----------------------------------------------------
-    // WRAPPED SETTERS WITH changeSource
-    // ----------------------------------------------------
     const setValueUser = (name: string, v: any) => {
       setValue(name, v);
 
@@ -884,7 +942,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     };
 
     const setValueProg = (name: string, v: any) => {
-      setValue(name, v);  // original
+      setValue(name, v);
       resolvedSchema.onChange?.(name, v, ctxRef.current!, "programmatic");
 
       ctxRef.current?.emit("form:change", {
@@ -896,7 +954,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     };
 
     const setAllValuesProg = (obj: Record<string, any>) => {
-      setAllValues(obj);  // original setAllValues
+      setAllValues(obj);
       resolvedSchema.onChange?.("*", obj, ctxRef.current!, "programmatic");
 
       ctxRef.current?.emit("form:change:all", {
@@ -905,9 +963,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       });
     };
 
-    // ----------------------------------------------------
-    // CTX FOR onChange
-    // ----------------------------------------------------
     ctxRef.current = {
       formSessionId: formSessionIdRef.current,
       metadataBlocks,
@@ -928,7 +983,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       on,
     };
 
-    /* SHOW-IF HASH */
     const allDepsRef = React.useRef<string[]>([]);
     const lastDepValuesRef = React.useRef<Record<string, any>>({});
 
@@ -940,7 +994,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
     const [, forceUpdate] = React.useReducer((x) => x + 1, 0);
 
-    /* INITIAL EXPAND */
     React.useEffect(() => {
       if (resolvingInitial) return;
       let cancelled = false;
@@ -958,25 +1011,22 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           metadataBlocks[i].deps = res.deps;
           metadataBlocks[i].collections = res.collections;
         });
-        setMetadataVersion(v => v + 1);
 
+        setMetadataVersion((v) => v + 1);
         allDepsRef.current = metadataBlocks.flatMap((b) => b.deps);
-
         forceUpdate();
       })();
 
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }, [resolvingInitial]);
 
-    // ------------------------------------------------------
-    // FORCE INITIAL CHANGED DEPS (very important)
-    // ------------------------------------------------------
     const forceInitDoneRef = React.useRef(false);
 
     React.useEffect(() => {
       if (resolvingInitial) return;
       if (forceInitDoneRef.current) return;
-
       if (allDepsRef.current.length === 0) return;
 
       forceInitDoneRef.current = true;
@@ -990,9 +1040,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       (async () => {
         const reloadList = metadataBlocks
           .map((b, i) => ({ b, i }))
-          .filter(({ b }) =>
-            b.deps.some((d) => initialChanged.includes(d))
-          );
+          .filter(({ b }) => b.deps.some((d) => initialChanged.includes(d)));
 
         const runtimeValues = ctxRef.current!.values;
         const results = await Promise.all(
@@ -1012,31 +1060,25 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
         setMetadataVersion((x) => x + 1);
         forceUpdate();
       })();
-
     }, [metadataVersion, resolvingInitial]);
 
-
-    /* HARD ISOLATE RELOAD */
     React.useEffect(() => {
       if (resolvingInitial) return;
 
       const changedDeps: string[] = [];
 
-      // detect which field changed
       for (const dep of allDepsRef.current) {
         const prev = lastDepValuesRef.current[dep];
         const now = values[dep];
         if (prev !== now) changedDeps.push(dep);
       }
 
-      // update snapshot
       for (const dep of allDepsRef.current) {
         lastDepValuesRef.current[dep] = values[dep];
       }
 
       if (changedDeps.length === 0) return;
 
-      // find blocks impacted by changedDeps
       const reloadList = metadataBlocks
         .map((b, i) => ({ b, i }))
         .filter(({ b }) => b.deps.some((d) => changedDeps.includes(d)));
@@ -1060,10 +1102,9 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           metadataBlocks[actual].deps = res.deps;
           metadataBlocks[actual].collections = res.collections;
         });
-        setMetadataVersion(v => v + 1);
 
+        setMetadataVersion((v) => v + 1);
         allDepsRef.current = metadataBlocks.flatMap((b) => b.deps);
-
         forceUpdate();
       })();
 
@@ -1072,9 +1113,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       };
     }, [showIfHash]);
 
-    // ==========================================
-    // EQUATION ENGINE
-    // ==========================================
     React.useEffect(() => {
       const eqFields = finalFields.filter(
         (f) => f.kind === "currency-equation" && f.currencyEquation
@@ -1109,18 +1147,12 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           if (runtime[f.name] !== result) {
             setValueProg(f.name, result);
           }
-
         } catch (e) {
           console.error("EQ ERROR:", e);
         }
       }
-    }, [
-      finalFields,
-      // values
-    ]);
+    }, [finalFields]);
 
-
-    /* SUBMIT */
     const [, setSaving] = React.useState(false);
 
     function resolveSearchSinglePair(field: FieldDef, values: Record<string, any>) {
@@ -1157,14 +1189,14 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           if (f.kind === "searchsingle" && f.validate) {
             const pair = resolveSearchSinglePair(f, values);
 
-            const msg = f.validate(
+            const searchMsg = f.validate(
               pair?.name ?? "",
               pair?.matched ?? null,
               ctxRef.current
             );
 
-            if (msg) {
-              setFieldError(f.name, msg);
+            if (searchMsg) {
+              setFieldError(f.name, searchMsg);
               valid = false;
             } else {
               setFieldError(f.name, null);
@@ -1173,7 +1205,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           }
 
           const value = values[f.name];
-          // ===== sync rules =====
+
           msg = validateOneSync(value, f.rules, f.label, f.kind);
           if (msg) {
             setFieldError(f.name, msg);
@@ -1181,7 +1213,6 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
             continue;
           }
 
-          // ===== async rules =====
           if (f.rules?.async) {
             try {
               const asyncMsg = await f.rules.async(value, values);
@@ -1216,7 +1247,9 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
       const latestValues = ctxRef.current!.values;
       const packaged = packageData(metadataBlocks, latestValues);
-      const dto = resolvedSchema.hooks?.mapToDto ? resolvedSchema.hooks.mapToDto(packaged) : packaged;
+      const dto = resolvedSchema.hooks?.mapToDto
+        ? resolvedSchema.hooks.mapToDto(packaged)
+        : packaged;
 
       const ctx = {
         values: dto,
@@ -1226,17 +1259,22 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
       try {
         const result = await btn.submit(ctx);
-        if (resolvedSchema.hooks?.mapFromDto) {
-          const uiVals = resolvedSchema.hooks.mapFromDto(result);
+
+        const mapFromDto = resolvedSchema.hooks?.mapFromDto;
+        if (mapFromDto) {
+          const uiVals = mapFromDto(result);
           if (uiVals && typeof uiVals === "object") setAllValues(uiVals);
         }
 
         if (btn.toasts?.saved !== "") {
           toasts.success(
-            resolveLocalizedText(renderModeText(
-              btn.toasts?.saved ?? resolvedSchema.toasts?.saved,
-              { mode, values, result }
-            ) as any, t) ?? "Đã lưu"
+            resolveLocalizedText(
+              renderModeText(
+                btn.toasts?.saved ?? resolvedSchema.toasts?.saved,
+                { mode, values, result }
+              ) as any,
+              t
+            ) ?? "Đã lưu"
           );
         }
 
@@ -1252,15 +1290,18 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
           { mode, values }
         );
 
-        toasts.error(friendlyMessage ?? resolveLocalizedText(failedToast as any, t) ?? "Lỗi");
+        toasts.error(
+          friendlyMessage ??
+            resolveLocalizedText(failedToast as any, t) ??
+            "Lỗi"
+        );
+
         return false;
       } finally {
         setSaving(false);
       }
     }
 
-
-    /* REF OUTPUT */
     React.useImperativeHandle(ref, () => ({
       submit: () => {
         const mode = resolveMode(resolvedSchema, initialValues);
@@ -1280,23 +1321,13 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       setAllValues: setAllValuesProg,
     }));
 
-    /* RENDER SUBMIT BUTTONS */
-    // const mode = resolveMode(schema, stableInitial);
-    // const submitButtons = resolveSubmitButtons(schema, mode);
-
-    /* RENDER */
-    if (!schema) {
-      return <div>Schema {name} chưa đăng ký.</div>;
-    }
-
     return (
       <Stack spacing={2}>
         {resolvingInitial ? (
           <div>Đang tải…</div>
         ) : (
           <AutoFormFieldsGrouped
-            groupMap={groupMap}
-            groupsConfig={groupsConfig}
+            groups={groups}
             values={values}
             setValue={setValueUser}
             errors={errors}

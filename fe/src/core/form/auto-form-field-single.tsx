@@ -442,6 +442,35 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
     nameValue,
   ]);
 
+  const defaultOnInteractPendingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    defaultOnInteractPendingRef.current = false;
+  }, [values[f.name]]);
+
+  const hydrateDefaultOnInteract = React.useCallback(() => {
+    if (!f.defaultOnInteract) return;
+
+    const currentValue = values[f.name];
+    const isEmptyValue =
+      currentValue === null ||
+      currentValue === undefined ||
+      currentValue === "";
+
+    if (!isEmptyValue || defaultOnInteractPendingRef.current) {
+      return;
+    }
+
+    defaultOnInteractPendingRef.current = true;
+
+    const nextValue =
+      f.defaultOnInteract === "current-date"
+        ? dayjs().format("YYYY-MM-DD")
+        : dayjs().toISOString();
+
+    setValue(f.name, nextValue);
+  }, [f.defaultOnInteract, f.name, setValue, values]);
+
   // AS TEXT MODE
   if (f.kind === "qr") {
     return (
@@ -612,6 +641,8 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
             fullWidth: f.fullWidth ?? true,
             error: !!error,
             helperText: error ?? fieldHelperText,
+            onFocus: hydrateDefaultOnInteract,
+            onClick: hydrateDefaultOnInteract,
           },
         }}
       />
@@ -638,6 +669,8 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
             fullWidth: f.fullWidth ?? true,
             error: !!error,
             helperText: error ?? fieldHelperText,
+            onFocus: hydrateDefaultOnInteract,
+            onClick: hydrateDefaultOnInteract,
           },
         }}
       />

@@ -174,6 +174,12 @@ bun install
 bun run dev
 ```
 
+## Environment layout
+
+- Root `.env*`: shared `APP_*` variables used by more than one app, for example `APP_FE_ORIGIN`
+- `/api/.env*`: backend-only runtime variables
+- `/fe/.env*`: frontend-only `VITE_*` variables
+
 ---
 
 ## 🧪 Example Use Cases

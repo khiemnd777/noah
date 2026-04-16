@@ -16,7 +16,6 @@ import (
 	"github.com/khiemnd777/noah_api/shared/circuitbreaker"
 	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/sony/gobreaker"
 )
 
 // How to use:
@@ -65,13 +64,13 @@ func (c *HttpClient) CallRequestWithPort(ctx context.Context, method, module str
 		return err
 	}
 
-	retry := getRetryOptions(opts)
+	retry := getRetryOptions(method, opts)
 	var lastErr error
 
 	for i := 0; i < retry.MaxAttempts; i++ {
 		_, err := circuitbreaker.Run(fmt.Sprintf("%s:%s", module, path), func(_ context.Context) (interface{}, error) {
 			log.Printf("URL: %s", url)
-			req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+			req, err := http.NewRequestWithContext(ctx, method, url, newRequestBody(reqBody))
 			if err != nil {
 				return nil, err
 			}
@@ -131,7 +130,7 @@ func (c *HttpClient) CallPostAsync(ctx context.Context, module, path, token, int
 
 // --- Helpers ---
 
-func marshalBody(body any) (io.Reader, error) {
+func marshalBody(body any) ([]byte, error) {
 	if body == nil {
 		return nil, nil
 	}
@@ -139,7 +138,14 @@ func marshalBody(body any) (io.Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(b), nil
+	return b, nil
+}
+
+func newRequestBody(body []byte) io.Reader {
+	if len(body) == 0 {
+		return nil
+	}
+	return bytes.NewReader(body)
 }
 
 func setHeaders(req *http.Request, token, internalToken string) {
@@ -166,36 +172,6 @@ func parseErrorResponse(resp *http.Response) error {
 	}
 }
 
-func getRetryOptions(opts []RetryOptions) RetryOptions {
-	defaultRetry := RetryOptions{
-		MaxAttempts: 3,
-		Delay:       200 * time.Millisecond,
-		ShouldRetry: func(err error) bool {
-			if err == nil {
-				return false
-			}
-			if errors.Is(err, circuitbreaker.ErrClientResponse) || errors.Is(err, gobreaker.ErrOpenState) {
-				return false
-			}
-			var statusErr *StatusError
-			if errors.As(err, &statusErr) && statusErr.StatusCode < http.StatusInternalServerError {
-				return false
-			}
-			return true
-		},
-	}
-	if len(opts) > 0 {
-		merged := opts[0]
-		if merged.ShouldRetry == nil {
-			merged.ShouldRetry = defaultRetry.ShouldRetry
-		}
-		if merged.MaxAttempts <= 0 {
-			merged.MaxAttempts = defaultRetry.MaxAttempts
-		}
-		if merged.Delay == 0 {
-			merged.Delay = defaultRetry.Delay
-		}
-		return merged
-	}
-	return defaultRetry
+func getRetryOptions(method string, opts []RetryOptions) RetryOptions {
+	return mergeRetryOptions(defaultRetryOptionsForMethod(method), opts)
 }

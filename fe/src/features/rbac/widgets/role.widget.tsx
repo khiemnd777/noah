@@ -28,5 +28,5 @@ registerSlot({
   id: "role",
   name: "rbac:left",
   priority: 2,
-  render: () => RoleWidget(),
+  render: () => <RoleWidget />,
 });

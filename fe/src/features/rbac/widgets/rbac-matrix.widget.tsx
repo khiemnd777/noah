@@ -19,5 +19,5 @@ registerSlot({
   id: "rbac-matrix",
   name: "rbac:left",
   priority: 1,
-  render: () => RBACMatrixWidget(),
+  render: () => <RBACMatrixWidget />,
 });

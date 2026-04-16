@@ -18,48 +18,40 @@ func EnsureEnvLoaded() error {
 	var loadErr error
 
 	loadDotEnvOnce.Do(func() {
-		start, err := os.Getwd()
-		if err != nil {
-			loadErr = err
-			return
-		}
-
-		root := start
-		candidates := envFileCandidates()
-		found := false
-		for {
-			for _, name := range candidates {
-				candidate := filepath.Join(root, name)
-				if _, err := os.Stat(candidate); err == nil {
-					if err := gotenv.Load(candidate); err != nil {
-						loadErr = fmt.Errorf("load .env %s: %w", candidate, err)
-					}
-					found = true
-					return
-				}
-			}
-
-			parent := filepath.Dir(root)
-			if parent == root {
-				break
-			}
-			root = parent
-		}
-
-		if !found {
-			for _, name := range candidates {
-				fallback := filepath.Join(start, "api", name)
-				if _, err := os.Stat(fallback); err == nil {
-					if err := gotenv.Load(fallback); err != nil {
-						loadErr = fmt.Errorf("load .env %s: %w", fallback, err)
-					}
-					return
-				}
-			}
-		}
+		loadErr = ensureEnvLoaded()
 	})
 
 	return loadErr
+}
+
+func ensureEnvLoaded() error {
+	start, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	if repoRoot, ok := findRepoRoot(start); ok {
+		if err := loadEnvFromDir(repoRoot); err != nil {
+			return err
+		}
+	}
+
+	if apiRoot, ok := findAncestorNamed(start, "api"); ok {
+		if err := loadEnvFromDir(apiRoot); err != nil {
+			return err
+		}
+	} else {
+		fallback := filepath.Join(start, "api")
+		if stat, err := os.Stat(fallback); err == nil && stat.IsDir() {
+			if err := loadEnvFromDir(fallback); err != nil {
+				return err
+			}
+		}
+	}
+
+	applySharedEnvOverrides()
+
+	return nil
 }
 
 func envFileCandidates() []string {
@@ -67,6 +59,61 @@ func envFileCandidates() []string {
 		return []string{".env.prod", ".env"}
 	}
 	return []string{".env"}
+}
+
+func loadEnvFromDir(dir string) error {
+	for _, name := range envFileCandidates() {
+		candidate := filepath.Join(dir, name)
+		if _, err := os.Stat(candidate); err == nil {
+			if err := gotenv.Load(candidate); err != nil {
+				return fmt.Errorf("load .env %s: %w", candidate, err)
+			}
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func applySharedEnvOverrides() {
+	if frontendOrigin := strings.TrimSpace(os.Getenv("APP_FE_ORIGIN")); frontendOrigin != "" {
+		os.Setenv("M_MAIN_CLIENT_BASE_URL", frontendOrigin)
+	}
+}
+
+func findRepoRoot(start string) (string, bool) {
+	for current := start; ; current = filepath.Dir(current) {
+		if dirExists(filepath.Join(current, "api")) && dirExists(filepath.Join(current, "fe")) {
+			return current, true
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", false
+		}
+	}
+}
+
+func findAncestorNamed(start string, name string) (string, bool) {
+	for current := start; ; current = filepath.Dir(current) {
+		if filepath.Base(current) == name {
+			return current, true
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", false
+		}
+	}
+}
+
+func dirExists(path string) bool {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return stat.IsDir()
 }
 
 func ReadExpandedYAML(path string) ([]byte, error) {

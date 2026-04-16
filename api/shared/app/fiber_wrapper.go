@@ -10,9 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/khiemnd777/noah_api/shared/circuitbreaker"
-	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/logger"
-	"github.com/sony/gobreaker"
 )
 
 // RetryOptions configures retry behavior for a route
@@ -38,33 +36,14 @@ func isWebSocketRequest(c *fiber.Ctx) bool {
 
 // WrapHandler applies Circuit Breaker + Retry logic to a single handler
 func WrapHandler(name string, h fiber.Handler, opts ...RetryOptions) fiber.Handler {
-	cfgRetry := config.Get().Retry
-
-	// default retry config
-	defaultRetry := RetryOptions{
-		MaxAttempts: cfgRetry.MaxAttempts,
-		Delay:       cfgRetry.Delay,
-		ShouldRetry: func(err error) bool {
-			if errors.Is(err, circuitbreaker.ErrClientResponse) || errors.Is(err, gobreaker.ErrOpenState) {
-				return false
-			}
-			if ferr, ok := err.(*fiber.Error); ok && ferr.Code >= 400 && ferr.Code < 500 {
-				return false
-			}
-			return err != nil
-		},
-	}
-	// fallback to default
-	retry := defaultRetry
-	if len(opts) > 0 {
-		retry = opts[0]
-	}
-
 	return func(c *fiber.Ctx) error {
 		if isWebSocketRequest(c) {
 			logger.Info("🔌 WS bypass circuit: " + name)
 			return h(c)
 		}
+
+		method := c.Method()
+		retry := mergeRetryOptions(defaultRetryOptionsForMethod(method), opts)
 
 		var err error
 		for i := 0; i < retry.MaxAttempts; i++ {
@@ -89,15 +68,31 @@ func WrapHandler(name string, h fiber.Handler, opts ...RetryOptions) fiber.Handl
 				return nil
 			}
 
+			if isRecoveredPanic(err) {
+				return err
+			}
+
 			if err == nil || !retry.ShouldRetry(err) {
 				return err
 			}
 
-			logger.Warn(fmt.Sprintf("🔁 Retry [%s] #%d failed: %v", name, i+1, err))
+			if i == retry.MaxAttempts-1 {
+				break
+			}
+
+			if !isSafeRetryMethod(method) && responseWasWritten(c.Response()) {
+				return err
+			}
+
+			if isSafeRetryMethod(method) {
+				c.Response().Reset()
+			}
+
+			logger.Warn(fmt.Sprintf("🔁 Retry [%s %s] #%d failed: %v", method, name, i+1, err))
 			time.Sleep(retry.Delay)
 		}
 
-		log.Printf("❌ Handler failed after retries: %s", name)
+		log.Printf("❌ Handler failed after retries: %s %s", method, name)
 		return err
 	}
 }

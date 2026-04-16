@@ -30,7 +30,7 @@ import { mapIdFieldToNameField } from "@root/shared/utils/relation.utils";
 import SearchSingleField from "./search-single-field";
 import { QRField } from "@root/core/form/qr-field";
 import { fDate, fDatetime, formatDate, formatDateTime } from "@root/shared/utils/datetime.utils";
-import { prefixCurrency } from "@root/shared/utils/currency.utils";
+import { formatCurrency, prefixCurrency } from "@root/shared/utils/currency.utils";
 import { useDebounce } from "@root/core/hooks/use-debounce";
 import { resolveLocalizedText } from "@root/core/i18n/localized-text";
 import { useI18n } from "@root/core/i18n/use-i18n";
@@ -104,7 +104,7 @@ function renderAsText(f: FieldDef, values: Record<string, any>) {
 
   // CURRENCY
   if (f.kind === "currency" || f.kind === "currency-equation") {
-    return <Typography>{prefixCurrency} {Number(v).toLocaleString()}</Typography>;
+    return <Typography>{formatCurrency(Number(v ?? 0))}</Typography>;
   }
 
   // SWITCH / CHECKBOX
@@ -144,6 +144,193 @@ function resolveRelationMirrors(fieldName: string) {
   const cf = [...prefix, "customFields", relField].join("."); // "customFields.supplier" hoặc "product.customFields.supplier"
 
   return { root, cf };
+}
+
+function AutocompleteFieldInput({
+  field,
+  values,
+  setValue,
+  error,
+  fieldLabel,
+  fieldHelperText,
+  isDisabled,
+}: {
+  field: FieldDef;
+  values: Record<string, any>;
+  setValue: (name: string, v: any) => void;
+  error?: string | null;
+  fieldLabel: string;
+  fieldHelperText?: string;
+  isDisabled: boolean;
+}) {
+  const [loading, setLoading] = React.useState(false);
+  const [opts, setOpts] = React.useState<Option[]>(field.options ?? []);
+  const optMap = React.useMemo(() => toMap(opts), [opts]);
+  const requestIdRef = React.useRef(0);
+  const mountedRef = React.useRef(true);
+
+  React.useEffect(() => {
+    setOpts(field.options ?? []);
+  }, [field.options]);
+
+  React.useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const value = values[field.name];
+  const selectedOption = optMap.get(value) ?? null;
+
+  const loadOptions = React.useCallback(async (keyword: string) => {
+    if (!field.loadOptions) return;
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    try {
+      const data = await field.loadOptions(keyword);
+      if (!mountedRef.current || requestId !== requestIdRef.current) return;
+      setOpts(data || []);
+    } finally {
+      if (mountedRef.current && requestId === requestIdRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [field.loadOptions]);
+
+  const debouncedLoadOptions = useDebounce(loadOptions, field.debounceMs ?? 300);
+
+  React.useEffect(() => {
+    return () => {
+      debouncedLoadOptions.clear();
+    };
+  }, [debouncedLoadOptions]);
+
+  return (
+    <Autocomplete
+      disabled={isDisabled}
+      options={opts}
+      value={field.freeSolo ? value ?? null : selectedOption}
+      freeSolo={!!field.freeSolo}
+      onInputChange={(_e, v, reason) => {
+        if (field.freeSolo && (reason === "input" || reason === "clear")) {
+          setValue(field.name, v);
+        }
+        if (field.loadOptions) debouncedLoadOptions(v);
+      }}
+      onChange={(_e, newVal) => {
+        if (field.freeSolo) {
+          if (newVal && typeof newVal === "object") {
+            setValue(field.name, (newVal as Option).value);
+          }
+        } else {
+          setValue(field.name, (newVal as Option | null)?.value ?? "");
+        }
+      }}
+      getOptionLabel={(o) => (typeof o === "string" ? o : (o as Option).label)}
+      isOptionEqualToValue={(a, b) => {
+        const va = (a as Option).value ?? a;
+        const vb = (b as Option).value ?? b;
+        return va === vb;
+      }}
+      loading={loading}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label={fieldLabel}
+          size={field.size ?? "small"}
+          fullWidth={field.fullWidth ?? true}
+          error={!!error}
+          helperText={error ?? fieldHelperText}
+          InputProps={{
+            ...params.InputProps,
+            endAdornment: (
+              <>
+                {loading ? <CircularProgress size={16} /> : null}
+                {params.InputProps.endAdornment}
+              </>
+            ),
+          }}
+        />
+      )}
+    />
+  );
+}
+
+function FileUploadFieldInput({
+  field,
+  values,
+  setValue,
+  error,
+  fieldLabel,
+  fieldHelperText,
+}: {
+  field: FieldDef;
+  values: Record<string, any>;
+  setValue: (name: string, v: any) => void;
+  error?: string | null;
+  fieldLabel: string;
+  fieldHelperText?: string;
+}) {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const val = values[field.name] as any[];
+  const urls = Array.isArray(val) ? val.filter((x) => typeof x === "string") : [];
+  const files = Array.isArray(val) ? val.filter((x) => typeof x !== "string") : [];
+
+  const openPicker = () => inputRef.current?.click();
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    if (list.length === 0) return;
+
+    const max = field.maxFiles ?? Infinity;
+    const merged = (files as File[]).concat(list).slice(0, max);
+
+    if (field.uploader) {
+      const uploaded = await field.uploader(merged);
+      setValue(field.name, uploaded);
+    } else {
+      setValue(field.name, merged);
+    }
+
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        hidden
+        multiple={field.multipleFiles ?? true}
+        accept={field.accept}
+        onChange={handleFiles}
+      />
+
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Button variant="outlined" size={field.size ?? "small"} onClick={openPicker}>
+          {fieldLabel}
+        </Button>
+        {error ? (
+          <FormHelperText error>{error}</FormHelperText>
+        ) : fieldHelperText ? (
+          <FormHelperText>{fieldHelperText}</FormHelperText>
+        ) : null}
+      </Stack>
+
+      <Stack direction="row" spacing={1} flexWrap="wrap">
+        {urls.map((u) => (
+          <Chip key={u} label={u} size="small" />
+        ))}
+        {files.map((file: File, i: number) => (
+          <Chip
+            key={`${file.name}-${i}`}
+            label={`${file.name} (${Math.round(file.size / 1024)} KB)`}
+            size="small"
+          />
+        ))}
+      </Stack>
+    </>
+  );
 }
 
 export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
@@ -483,7 +670,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
         {...(common as any)}
         value={raw}
         onChange={(n) => setValue(f.name, n)}
-        prefix="₫"
+        prefix={prefixCurrency}
         decimalScale={0}
         InputLabelProps={{
           shrink: hasValue,
@@ -507,7 +694,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
         {...(common as any)}
         value={raw}
         onChange={(n) => setValue(f.name, n)}
-        prefix="₫"
+        prefix={prefixCurrency}
         decimalScale={0}
         InputLabelProps={{
           shrink: hasValue,
@@ -677,85 +864,15 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
 
   // AUTOCOMPLETE
   if (f.kind === "autocomplete") {
-    const [loading, setLoading] = React.useState(false);
-    const [opts, setOpts] = React.useState<Option[]>(f.options ?? []);
-    const optMap = toMap(opts);
-    const requestIdRef = React.useRef(0);
-    const mountedRef = React.useRef(true);
-
-    React.useEffect(() => {
-      return () => {
-        mountedRef.current = false;
-      };
-    }, []);
-
-    const value = values[f.name];
-    const selectedOption = optMap.get(value) ?? null;
-
-    const loadOptions = React.useCallback(async (keyword: string) => {
-      if (!f.loadOptions) return;
-      const requestId = ++requestIdRef.current;
-      setLoading(true);
-      try {
-        const data = await f.loadOptions(keyword);
-        if (!mountedRef.current || requestId !== requestIdRef.current) return;
-        setOpts(data || []);
-      } finally {
-        if (mountedRef.current && requestId === requestIdRef.current) {
-          setLoading(false);
-        }
-      }
-    }, [f.loadOptions]);
-
-    const debouncedLoadOptions = useDebounce(loadOptions, f.debounceMs ?? 300);
-
     return (
-      <Autocomplete
-        disabled={isDisabled}
-        options={opts}
-        value={f.freeSolo ? value ?? null : selectedOption}
-        freeSolo={!!f.freeSolo}
-        onInputChange={(_e, v, reason) => {
-          if (f.freeSolo && (reason === "input" || reason === "clear")) {
-            setValue(f.name, v);
-          }
-          if (f.loadOptions) debouncedLoadOptions(v);
-        }}
-        onChange={(_e, newVal) => {
-          if (f.freeSolo) {
-            if (newVal && typeof newVal === "object") {
-              setValue(f.name, (newVal as Option).value);
-            }
-          } else {
-            setValue(f.name, (newVal as Option | null)?.value ?? "");
-          }
-        }}
-        getOptionLabel={(o) => (typeof o === "string" ? o : (o as Option).label)}
-        isOptionEqualToValue={(a, b) => {
-          const va = (a as Option).value ?? a;
-          const vb = (b as Option).value ?? b;
-          return va === vb;
-        }}
-        loading={loading}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label={fieldLabel}
-            size={f.size ?? "small"}
-            fullWidth={f.fullWidth ?? true}
-            error={!!error}
-            helperText={error ?? fieldHelperText}
-            InputProps={{
-              ...params.InputProps,
-              endAdornment: (
-                <>
-                  {loading ? <CircularProgress size={16} /> : null}
-                  {params.InputProps.endAdornment}
-                </>
-              ),
-            }}
-          />
-        )}
+      <AutocompleteFieldInput
+        field={f}
+        values={values}
+        setValue={setValue}
+        error={error}
+        fieldLabel={fieldLabel}
+        fieldHelperText={fieldHelperText}
+        isDisabled={isDisabled}
       />
     );
   }
@@ -870,65 +987,15 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
 
   // FILEUPLOAD
   if (f.kind === "fileupload") {
-    const inputRef = React.useRef<HTMLInputElement | null>(null);
-    const val = values[f.name] as any[];
-    const urls = Array.isArray(val) ? val.filter((x) => typeof x === "string") : [];
-    const files = Array.isArray(val) ? val.filter((x) => typeof x !== "string") : [];
-
-    const openPicker = () => inputRef.current?.click();
-
-    const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const list = e.target.files ? Array.from(e.target.files) : [];
-      if (list.length === 0) return;
-
-      const max = f.maxFiles ?? Infinity;
-      const merged = (files as File[]).concat(list).slice(0, max);
-
-      if (f.uploader) {
-        const uploaded = await f.uploader(merged);
-        setValue(f.name, uploaded);
-      } else {
-        setValue(f.name, merged);
-      }
-
-      if (inputRef.current) inputRef.current.value = "";
-    };
-
     return (
-      <>
-        <input
-          ref={inputRef}
-          type="file"
-          hidden
-          multiple={f.multipleFiles ?? true}
-          accept={f.accept}
-          onChange={handleFiles}
-        />
-
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button variant="outlined" size={f.size ?? "small"} onClick={openPicker}>
-            {fieldLabel}
-          </Button>
-          {error ? (
-            <FormHelperText error>{error}</FormHelperText>
-          ) : fieldHelperText ? (
-            <FormHelperText>{fieldHelperText}</FormHelperText>
-          ) : null}
-        </Stack>
-
-        <Stack direction="row" spacing={1} flexWrap="wrap">
-          {urls.map((u) => (
-            <Chip key={u} label={u} size="small" />
-          ))}
-          {files.map((file: File, i: number) => (
-            <Chip
-              key={`${file.name}-${i}`}
-              label={`${file.name} (${Math.round(file.size / 1024)} KB)`}
-              size="small"
-            />
-          ))}
-        </Stack>
-      </>
+      <FileUploadFieldInput
+        field={f}
+        values={values}
+        setValue={setValue}
+        error={error}
+        fieldLabel={fieldLabel}
+        fieldHelperText={fieldHelperText}
+      />
     );
   }
 

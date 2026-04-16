@@ -697,6 +697,10 @@ type Props = AutoFormProps & {
   notifier?: typeof toast;
 };
 
+const EMPTY_FORM_SCHEMA: FormSchema = {
+  fields: [],
+};
+
 export const AutoForm = React.forwardRef<AutoFormRef, Props>(
   ({ name, schema: schemaProp, initial, onSaved, notifier }, ref) => {
     const { t } = useI18n();
@@ -708,8 +712,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       if (name) return getFormSchema(name);
       return null;
     }, [schemaProp, name]);
-
-    if (!schema) return <div>Schema {name} chưa đăng ký.</div>;
+    const resolvedSchema = schema ?? EMPTY_FORM_SCHEMA;
 
     /* RESOLVE INITIAL */
     const [resolvedInitial, setResolvedInitial] = React.useState(initial ?? {});
@@ -727,8 +730,8 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       (async () => {
         setResolvingInitial(true);
         try {
-          const resolved = schema.initialResolver
-            ? await schema.initialResolver(initial)
+          const resolved = resolvedSchema.initialResolver
+            ? await resolvedSchema.initialResolver(initial)
             : initial;
 
           const finalInitial =
@@ -758,7 +761,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       })();
 
       return () => { cancelled = true; };
-    }, [initial, schema]);
+    }, [initial, resolvedSchema]);
 
     const initialValues = resolvedInitial ?? {};
 
@@ -773,7 +776,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     >([]);
 
     if (metadataBlocksRef.current.length === 0) {
-      metadataBlocksRef.current = schema.fields
+      metadataBlocksRef.current = resolvedSchema.fields
         .filter((f) => f.kind === "metadata")
         .map((meta) => ({
           meta,
@@ -795,7 +798,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
         metadataMap.set(b.meta, b.fields);
       });
 
-      for (const f of schema.fields) {
+      for (const f of resolvedSchema.fields) {
         if (f.kind === "metadata") {
           const fields = metadataMap.get(f) ?? [];
           arr.push(...fields);
@@ -811,12 +814,12 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
         }
       }
       return arr;
-    }, [metadataVersion, schema.fields]);
+    }, [metadataVersion, resolvedSchema.fields]);
 
     // ========================================
     // GROUP ENGINE
     // ========================================
-    const groupsConfig = schema.groups ?? [{ name: "general", col: 1 }];
+    const groupsConfig = resolvedSchema.groups ?? [{ name: "general", col: 1 }];
 
     // gom field theo group
     const groupMap = React.useMemo(() => {
@@ -842,8 +845,8 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
     /* NON-METADATA FIELDS */
     const baseFields = React.useMemo(
-      () => schema.fields.filter((f) => f.kind !== "metadata"),
-      [schema.fields]
+      () => resolvedSchema.fields.filter((f) => f.kind !== "metadata"),
+      [resolvedSchema.fields]
     );
 
     /* MAIN FORM STATE */
@@ -856,7 +859,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
       setFieldError,
       validateAll,
     } = useAutoForm(baseFields, initialValues, {
-      asyncValidate: schema.hooks?.asyncValidate,
+      asyncValidate: resolvedSchema.hooks?.asyncValidate,
     });
 
     const ctxRef = React.useRef<FormContext>(null);
@@ -871,7 +874,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
         setFieldError(name, null);
       }
 
-      schema.onChange?.(name, v, ctxRef.current!, "user");
+      resolvedSchema.onChange?.(name, v, ctxRef.current!, "user");
       ctxRef.current?.emit("form:change", {
         name,
         value: v,
@@ -882,7 +885,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
     const setValueProg = (name: string, v: any) => {
       setValue(name, v);  // original
-      schema.onChange?.(name, v, ctxRef.current!, "programmatic");
+      resolvedSchema.onChange?.(name, v, ctxRef.current!, "programmatic");
 
       ctxRef.current?.emit("form:change", {
         name,
@@ -894,7 +897,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
     const setAllValuesProg = (obj: Record<string, any>) => {
       setAllValues(obj);  // original setAllValues
-      schema.onChange?.("*", obj, ctxRef.current!, "programmatic");
+      resolvedSchema.onChange?.("*", obj, ctxRef.current!, "programmatic");
 
       ctxRef.current?.emit("form:change:all", {
         values: ctxRef.current?.values,
@@ -1213,7 +1216,7 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
       const latestValues = ctxRef.current!.values;
       const packaged = packageData(metadataBlocks, latestValues);
-      const dto = schema!.hooks?.mapToDto ? schema!.hooks.mapToDto(packaged) : packaged;
+      const dto = resolvedSchema.hooks?.mapToDto ? resolvedSchema.hooks.mapToDto(packaged) : packaged;
 
       const ctx = {
         values: dto,
@@ -1223,29 +1226,29 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
       try {
         const result = await btn.submit(ctx);
-        if (schema!.hooks?.mapFromDto) {
-          const uiVals = schema!.hooks.mapFromDto(result);
+        if (resolvedSchema.hooks?.mapFromDto) {
+          const uiVals = resolvedSchema.hooks.mapFromDto(result);
           if (uiVals && typeof uiVals === "object") setAllValues(uiVals);
         }
 
         if (btn.toasts?.saved !== "") {
           toasts.success(
             resolveLocalizedText(renderModeText(
-              btn.toasts?.saved ?? schema!.toasts?.saved,
+              btn.toasts?.saved ?? resolvedSchema.toasts?.saved,
               { mode, values, result }
             ) as any, t) ?? "Đã lưu"
           );
         }
 
         if (btn.afterSaved) await btn.afterSaved(result);
-        if (schema!.afterSaved) await schema!.afterSaved(result, ctx);
+        if (resolvedSchema.afterSaved) await resolvedSchema.afterSaved(result, ctx);
         if (onSaved) await onSaved(result);
 
         return true;
       } catch (err: any) {
         const friendlyMessage = getUserFriendlyErrorMessage(err);
         const failedToast = renderModeText(
-          btn.toasts?.failed ?? schema!.toasts?.failed,
+          btn.toasts?.failed ?? resolvedSchema.toasts?.failed,
           { mode, values }
         );
 
@@ -1260,17 +1263,17 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     /* REF OUTPUT */
     React.useImperativeHandle(ref, () => ({
       submit: () => {
-        const mode = resolveMode(schema, initialValues);
-        const buttons = resolveSubmitButtons(schema, mode);
+        const mode = resolveMode(resolvedSchema, initialValues);
+        const buttons = resolveSubmitButtons(resolvedSchema, mode);
         const primary = buttons[0];
         return handleSubmitButton(primary, mode);
       },
       runSubmitButton: handleSubmitButton,
       getSubmitButtons: () => {
-        const mode = resolveMode(schema, initialValues);
-        return resolveSubmitButtons(schema, mode);
+        const mode = resolveMode(resolvedSchema, initialValues);
+        return resolveSubmitButtons(resolvedSchema, mode);
       },
-      schema,
+      schema: resolvedSchema,
       values,
       reset: () => setAllValuesProg(initialValues),
       setValue: setValueProg,
@@ -1282,6 +1285,10 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
     // const submitButtons = resolveSubmitButtons(schema, mode);
 
     /* RENDER */
+    if (!schema) {
+      return <div>Schema {name} chưa đăng ký.</div>;
+    }
+
     return (
       <Stack spacing={2}>
         {resolvingInitial ? (

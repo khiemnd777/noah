@@ -39,7 +39,7 @@ interface CollapsibleChipProps {
 
 export function BasePage({ children }: { children: React.ReactNode }) {
   const { department } = useAuth();
-  const { key, title, subtitle } = useRouteMeta();
+  const { key, title, subtitle, parentPath, isDetailRoute } = useRouteMeta();
   const { t } = useI18n();
   const reactNavigate = useNavigate();
   const theme = useTheme();
@@ -192,6 +192,11 @@ export function BasePage({ children }: { children: React.ReactNode }) {
   const toolbarSubtitle = React.useMemo(() => {
     return resolveLocalizedText(subtitle, t);
   }, [subtitle, t]);
+
+  const onBack = React.useMemo(() => {
+    if (!isDetailRoute || !parentPath) return undefined;
+    return () => reactNavigate(parentPath);
+  }, [isDetailRoute, parentPath, reactNavigate]);
 
   return (
     <Box
@@ -491,7 +496,7 @@ export function BasePage({ children }: { children: React.ReactNode }) {
             key={key}
             title={toolbarTitle}
             subtitle={toolbarSubtitle}
-            onBack={history.length > 1 ? () => reactNavigate(-1) : undefined}
+            onBack={onBack}
             actions={
               <>
               </>

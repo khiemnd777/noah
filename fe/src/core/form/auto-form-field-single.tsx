@@ -449,7 +449,7 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
   }, [values[f.name]]);
 
   const hydrateDefaultOnInteract = React.useCallback(() => {
-    if (!f.defaultOnInteract) return;
+    if (!f.defaultNowOnInteract) return;
 
     const currentValue = values[f.name];
     const isEmptyValue =
@@ -463,13 +463,12 @@ export const AutoFormFieldSingle = React.memo(function AutoFormFieldSingle({
 
     defaultOnInteractPendingRef.current = true;
 
-    const nextValue =
-      f.defaultOnInteract === "current-date"
-        ? dayjs().format("YYYY-MM-DD")
-        : dayjs().toISOString();
+    const nextValue = f.kind === "date"
+      ? dayjs().format("YYYY-MM-DD")
+      : dayjs().toISOString();
 
     setValue(f.name, nextValue);
-  }, [f.defaultOnInteract, f.name, setValue, values]);
+  }, [f.defaultNowOnInteract, f.kind, f.name, setValue, values]);
 
   // AS TEXT MODE
   if (f.kind === "qr") {

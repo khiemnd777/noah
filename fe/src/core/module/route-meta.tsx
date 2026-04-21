@@ -8,6 +8,10 @@ export type RouteMeta = {
   title?: LocalizedText;
   subtitle?: LocalizedText;
   path: string;
+  hidden?: boolean;
+  parentKey?: string;
+  parentPath?: string;
+  isDetailRoute?: boolean;
   extra?: Record<string, unknown>;
 };
 

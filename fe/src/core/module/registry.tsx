@@ -1,4 +1,5 @@
 import type {
+  MenuGroup,
   MenuItem,
   ModuleDescriptor,
   RouteConfig,
@@ -123,7 +124,7 @@ export function withMeta(
 function flattenRoutes(nodes: RouteNode[]): RouteConfig[] {
   const out: RouteConfig[] = [];
 
-  const walk = (arr: RouteNode[]) => {
+  const walk = (arr: RouteNode[], parent?: RouteNode) => {
     for (const n of sortByPriority(arr)) {
       const meta: RouteMeta = {
         key: n.key,
@@ -131,6 +132,10 @@ function flattenRoutes(nodes: RouteNode[]): RouteConfig[] {
         title: n.title,
         subtitle: n.subtitle,
         path: n.path,
+        hidden: n.hidden,
+        parentKey: parent?.key,
+        parentPath: parent?.path,
+        isDetailRoute: Boolean(parent?.path && n.hidden),
         extra: n.extra,
       };
 
@@ -140,7 +145,7 @@ function flattenRoutes(nodes: RouteNode[]): RouteConfig[] {
         element: withMeta(n.element, meta),
       });
 
-      if (n.children?.length) walk(n.children);
+      if (n.children?.length) walk(n.children, n);
     }
   };
 
@@ -171,10 +176,46 @@ function toMenu(nodes: RouteNode[]): MenuItem[] {
     };
   };
 
+  const rootItems: MenuItem[] = [];
+  const groupedItems = new Map<string, { group: MenuGroup; items: MenuItem[] }>();
 
-  const rootItems = nodes
-    .map(mapNode)
-    .filter((x): x is MenuItem => x !== null);
+  for (const node of nodes) {
+    const mapped = mapNode(node);
+    if (!mapped) continue;
+
+    const group = node.menuGroup;
+    if (!group) {
+      rootItems.push(mapped);
+      continue;
+    }
+
+    const current = groupedItems.get(group.key);
+    if (current) {
+      current.items.push(mapped);
+      continue;
+    }
+
+    groupedItems.set(group.key, {
+      group,
+      items: [mapped],
+    });
+  }
+
+  for (const { group, items } of groupedItems.values()) {
+    rootItems.push({
+      key: group.key,
+      label: group.label,
+      to: group.to ?? "",
+      icon: group.icon,
+      chip: group.chip,
+      priority: group.priority ?? 0,
+      roles: group.roles,
+      requireAll: group.requireAll,
+      permissions: group.permissions,
+      extra: group.extra,
+      subItems: items,
+    });
+  }
 
   const sortDeep = (items: MenuItem[]): MenuItem[] =>
     sortByPriority(items).map((it) => ({

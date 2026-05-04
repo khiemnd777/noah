@@ -12,16 +12,14 @@ export function useMenuByAccess(items: MenuItem[]) {
   const { hasAnyRole, hasAllRoles } = useRoleChecks();
   const { hasAnyPermissions, hasAllPermissions } = usePermissionChecks();
 
-  return items.filter((it) => {
+  const filterItem = (it: MenuItem): MenuItem | null => {
     const requireAll = !!it.requireAll;
 
-    // Roles
     let roleOK = true;
     if (it.roles?.length) {
       roleOK = requireAll ? hasAllRoles(it.roles) : hasAnyRole(it.roles);
     }
 
-    // Permissions
     let permOK = true;
     if (it.permissions?.length) {
       permOK = requireAll
@@ -29,8 +27,34 @@ export function useMenuByAccess(items: MenuItem[]) {
         : hasAnyPermissions(it.permissions as Perm[]);
     }
 
-    return roleOK && permOK;
-  });
+    if (!roleOK || !permOK) {
+      return null;
+    }
+
+    const subItems = it.subItems
+      ?.map(filterItem)
+      .filter((child): child is MenuItem => child !== null);
+
+    if ((subItems?.length ?? 0) > 0) {
+      return {
+        ...it,
+        subItems,
+      };
+    }
+
+    if (!it.to) {
+      return null;
+    }
+
+    return {
+      ...it,
+      subItems: undefined,
+    };
+  };
+
+  return items
+    .map(filterItem)
+    .filter((item): item is MenuItem => item !== null);
 }
 
 /* Ví dụ sử dụng useMenuByAccess:
@@ -51,4 +75,3 @@ export function SideMenu() {
   );
 }
 */
-

@@ -1,0 +1,167 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+
+      - name: Build frontend
+        working-directory: fe
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Run API tests
+        working-directory: api
+        run: go test ./...
+
+      - name: Install SSH tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass rsync
+
+      - name: Ensure remote deploy directory exists
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          sshpass -p "$VPS_PASSWORD" ssh \
+            -o StrictHostKeyChecking=no \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "mkdir -p '$VPS_DEPLOY_PATH'"
+
+      - name: Sync source snapshot
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          sshpass -p "$VPS_PASSWORD" rsync -az --delete \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude "fe/node_modules/" \
+            --exclude "fe/dist/" \
+            --exclude ".data/" \
+            --exclude ".gocache/" \
+            --exclude ".env" \
+            --exclude ".env.prod" \
+            --exclude "api/.env" \
+            --exclude "api/.env.prod" \
+            --exclude "deploy/config/project.env" \
+            -e "ssh -o StrictHostKeyChecking=no -p $VPS_PORT" \
+            ./ "$VPS_USER@$VPS_HOST:$VPS_DEPLOY_PATH/"
+
+      - name: Upload deploy control env
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+          VPS_SUDO_PASSWORD: ${{ secrets.VPS_SUDO_PASSWORD }}
+          PROJECT_ENV_B64: ${{ secrets.PROJECT_ENV_B64 }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+        run: |
+          deploy_env_file="$(mktemp)"
+          trap 'rm -f "$deploy_env_file"' EXIT
+
+          {
+            printf 'VPS_DEPLOY_PATH=%s\n' "$VPS_DEPLOY_PATH"
+            printf 'VPS_SUDO_PASSWORD=%s\n' "$VPS_SUDO_PASSWORD"
+            printf 'PROJECT_ENV_B64=%s\n' "$PROJECT_ENV_B64"
+            printf 'LETSENCRYPT_EMAIL=%s\n' "$LETSENCRYPT_EMAIL"
+          } > "$deploy_env_file"
+
+          sshpass -p "$VPS_PASSWORD" scp \
+            -o StrictHostKeyChecking=no \
+            -P "$VPS_PORT" \
+            "$deploy_env_file" \
+            "$VPS_USER@$VPS_HOST:$VPS_DEPLOY_PATH/.deploy.env"
+
+      - name: Provision runtime and deploy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          sshpass -p "$VPS_PASSWORD" ssh \
+            -o StrictHostKeyChecking=no \
+            -p "$VPS_PORT" \
+            "$VPS_USER@$VPS_HOST" \
+            "cd '$VPS_DEPLOY_PATH' && bash '$VPS_DEPLOY_PATH/deploy/scripts/provision-and-deploy.sh'"
+
+      - name: Compute notification payload
+        if: always()
+        run: |
+          short_sha="${GITHUB_SHA::7}"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          if [ "${{ job.status }}" = "success" ]; then
+            status_word="SUCCESS"
+          else
+            status_word="FAILED"
+          fi
+
+          {
+            printf 'NOTIFY_SUBJECT=[DEPLOY %s] %s %s #%s\n' "$status_word" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$GITHUB_RUN_NUMBER"
+            printf 'NOTIFY_BODY<<EOF\n'
+            printf 'Repository: %s\n' "$GITHUB_REPOSITORY"
+            printf 'Branch: %s\n' "$GITHUB_REF_NAME"
+            printf 'Actor: %s\n' "$GITHUB_ACTOR"
+            printf 'Commit: %s\n' "$short_sha"
+            printf 'Run number: %s\n' "$GITHUB_RUN_NUMBER"
+            printf 'Status: %s\n' "$status_word"
+            printf 'Run URL: %s\n' "$run_url"
+            printf 'EOF\n'
+          } >> "$GITHUB_ENV"
+
+      - name: Send deploy email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: ${{ env.NOTIFY_SUBJECT }}
+          body: ${{ env.NOTIFY_BODY }}
+          to: ${{ secrets.SMTP_TO }}
+          from: ${{ secrets.SMTP_FROM }}

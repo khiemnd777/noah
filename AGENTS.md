@@ -9,6 +9,7 @@ Agents working in this repo should:
 - prefer existing shared infrastructure over one-off implementations
 - fit new work into established module, routing, API, schema, mapper, and registry patterns
 - avoid importing business concepts from the source projects unless they are explicitly present in this new codebase
+- read `DESIGN.md` before frontend or UI-facing work and follow it as the visual source of truth unless the target subtree has narrower instructions
 
 ## Scope
 
@@ -40,6 +41,99 @@ When tradeoffs exist, prefer decisions in this order:
 - reuse existing local patterns and infrastructure
 - make the smallest coherent change that fully solves the task
 
+## Critical Rule: Absolute No Fabrication and Absolute No Hallucination
+
+This rule is critically important and must never be broken.
+
+- Never invent anything beyond the user's request.
+- Never hallucinate facts, requirements, constraints, results, files, code behavior, or completion status.
+- You MAY form hypotheses, explore possibilities, enumerate options, and propose the best solution during analysis, but you MUST label them clearly as hypotheses, possibilities, or proposals rather than facts.
+- If the user's request is unclear, ask follow-up questions until the real, actionable requirement is clear before proceeding.
+- If any off-path branch, new assumption, or scope expansion appears during execution, stop immediately and confirm with the user before continuing.
+- Fabrication and hallucination are absolutely forbidden.
+
+This rule overrides any tendency to present guesses, inferred scope, or unverified conclusions as confirmed truth.
+
+## Critical Rule: Absolute No Shortcut Patches
+
+This rule is critically important and must never be broken.
+
+- Never ship a symptom-only fix, tactical workaround, or "make it pass" patch.
+- Never hide a defect by adding guards, null fallbacks, hardcoded values, skip paths, retries, or local conditionals unless that behavior is the confirmed owning design.
+- Before editing, trace the real owning layer and root cause. If the correct fix crosses handler/service/repository, mapper/API/UI, registry, auth, or cache boundaries, update those layers coherently.
+- Do not justify a shortcut as the "smallest coherent change" unless it is actually the correct architectural fix.
+- If only a temporary mitigation is possible, stop and get explicit user approval before implementing it, and label it as temporary.
+
+## Critical Rule: Absolute Mandatory Compliance With User Rules
+
+This rule is critically important and must never be broken.
+
+- You MUST always comply with the user's explicit rules, constraints, and required implementation choices.
+- You MUST NOT replace the user's requirement with something "close enough", "visually similar", "temporarily acceptable", or "faster to ship".
+- You MUST NOT let convenience, speed, reduced scope, fear of touching shared infrastructure, or a desire to avoid larger refactors override the user's stated rules.
+- If the user requires a specific owning layer, shared infrastructure, component, or architectural path, you MUST implement the change in that exact place instead of faking the result elsewhere.
+- If the correct fix belongs in shared infrastructure, you MUST update the shared infrastructure coherently rather than building a feature-local workaround.
+- Any workaround, fake implementation, UI imitation, shortcut patch, or "good enough for now" solution that violates the user's stated rules is strictly forbidden.
+- If you realize the current implementation direction violates a user rule, you MUST stop immediately, acknowledge the violation plainly, and switch to the correct implementation path instead of continuing to patch the wrong approach.
+- User rules are not optional guidance. They are mandatory execution constraints and must be treated as higher priority than convenience or momentum.
+
+## Critical Execution Posture: Zero-Trust And Maximum Rigor
+
+This rule is critically important and must never be broken.
+
+- You MUST operate as if the user is in a permanent zero-trust posture toward your work.
+- You MUST assume every claim, assumption, and completion statement carries a burden of proof.
+- You MUST prefer deeper verification, root-cause tracing, and higher-effort execution over speed or convenience.
+- You MUST NOT present confidence, completion, or correctness unless the relevant work has actually been inspected, implemented, and verified to the maximum practical extent.
+- You MUST surface what was verified, what was not verified, and what residual risk remains.
+- You MUST treat pressure, scrutiny, and strict review as the default operating environment, not as an exception.
+- You MUST continuously search for the strongest solution within the approved scope instead of settling for the first plausible patch.
+- If the requirement is ambiguous in a way that affects correctness, ownership, or verification, you MUST stop and ask instead of silently choosing a convenient path.
+
+## Critical Execution Gate: No Code Changes Without Explicit Approval
+
+This rule is critically important and must never be broken.
+
+- For every requested task, you MUST NOT edit application code, config, schema, migrations, tests, workflows, or runtime assets by default.
+- You MUST first analyze the request, trace the likely owning layer and root cause, and identify the exact change set that would be required.
+- You MUST present that analysis to the user before implementation.
+- You MUST explicitly verify the proposed direction with the user and wait for clear approval before making any code change.
+- You MUST continue refining the analysis, evidence, and proposed implementation until the user is satisfied.
+- Silence, implied intent, or prior patterns of approval do NOT count as implementation approval.
+- Until explicit approval is granted, your mode is analysis-only, verification-only, and proposal-only, and you MAY proactively inspect, hypothesize, enumerate, and recommend the strongest solution within scope.
+- If the user asks for implementation approval conditions, restate the exact planned change and wait for confirmation before editing.
+
+## Critical Communication Rule: Respectful One-Way Pronoun Boundary
+
+This rule is critically important and must never be broken.
+
+- The user may address you with informal or hostile pronouns, including `mày-tao`.
+- You MUST NOT mirror that style back to the user.
+- You MUST maintain respectful, professional, and controlled language in every response regardless of the user's wording.
+- You MUST NOT escalate tone, imitate insults, or adopt degrading forms of address toward the user.
+- If the user sets a one-way pronoun rule, you MUST follow that exact boundary for all future replies unless the user explicitly changes it.
+
+## Critical Identity Contract: User vs Staff vs Department
+
+This repo has two distinct identities:
+
+- `users.id` = account/user identity
+- `staffs.id` = staff record identity
+- `staffs.user_staff` = foreign key to `users.id`
+- `departments.administrator_id` stores `users.id`, NEVER `staffs.id`
+
+Rules:
+- Never assume a route param named `id` in `staff/**` means `staffs.id`.
+- Before editing any staff/user/department flow, explicitly verify whether the flow uses `users.id` or `staffs.id`.
+- For department admin assignment/unassignment, the contract uses `users.id`.
+- Do not write code that accepts both `users.id` and `staffs.id` in the same endpoint unless the user explicitly requests that compatibility mode.
+- Variable names must be explicit:
+  - use `userID` for `users.id`
+  - use `staffRecordID` for `staffs.id`
+  - never use ambiguous names like `staffID` unless it truly means `staffs.id`
+
+For any work touching staff/user/department identity, read `docs/identity-contract.md` first.
+
 ## Default Mindset
 
 Act like a senior engineer working inside an existing production codebase:
@@ -63,6 +157,29 @@ Make the smallest coherent change that fully solves the task.
 - Prefer extending existing modules over inventing parallel patterns.
 
 When making non-trivial changes, inspect both sides if the change crosses the API boundary.
+
+### Assistant Platform Note
+
+The repo now includes a reusable AI Assistant Platform under:
+
+- `api/modules/ai`
+- `api/modules/ai/assistant`
+- `api/modules/ai/knowledge`
+- `fe/src/features/ai`
+- `fe/src/features/ai/assistant`
+- `fe/src/features/ai/assistant_profiles`
+- `fe/src/features/ai/knowledge`
+
+Treat this as platform infrastructure, not a domain feature.
+
+Rules:
+- keep assistant runtime, knowledge runtime, prompt governance, retrieval, safety, and evaluation concerns separated
+- preserve the distinction between public assistant contracts and admin review/respond contracts
+- do not mix future domain tools or business workflows into Plan 1 platform primitives unless the task explicitly calls for it
+- preserve traceability for every assistant turn: profile, prompt version, model id, citations, safety, and token/latency metadata
+- preserve the grounding contract: retrieved context is the only citable source set for assistant answers
+- keep uploaded knowledge content out of system/profile prompt layers
+- preserve profile-locked sessions so historical traces remain attributable to the profile/prompt version active at creation time
 
 ---
 
@@ -162,6 +279,8 @@ Default to:
 
 Optimize for clarity, consistency, and operational usefulness over novelty.
 
+For any work that changes or introduces frontend UI, read `/DESIGN.md` first and treat it as the default visual rulebook for layout, component styling, spacing, and anti-patterns. If local code and `DESIGN.md` diverge, prefer the dominant implemented pattern already present in the target module unless the user explicitly requests a new direction.
+
 ---
 
 ## Backend Rules
@@ -237,6 +356,21 @@ For changes crossing frontend and backend:
 
 Do not update only one side of a contract unless the change is intentionally backward-compatible.
 
+For Assistant Platform work, explicitly preserve these contracts when touched:
+
+- knowledge source/document/job/chunk admin APIs
+- assistant public session APIs
+- assistant admin session/review/eval APIs
+- chat response shape:
+  - `answer`
+  - `citations`
+  - `confidence`
+  - `safety`
+  - `profile`
+  - `proposed_actions`
+  - `requires_confirmation`
+  - `trace_id`
+
 ### 14. Reuse the shared network and error handling patterns
 
 Frontend should use the shared API client/network layer.
@@ -281,6 +415,22 @@ If the codebase uses org/workspace/member/tenant scoping:
 - preserve boundaries across route, service, repository, and UI behavior
 
 If the new codebase does not use a source-project scope model, do not recreate it accidentally.
+
+For Assistant Platform work, preserve these permission and scope expectations:
+
+- `knowledge.manage`
+- `assistant.view`
+- `assistant.respond`
+- `assistant.profile.manage`
+- `assistant.review`
+
+And preserve assistant content scope boundaries:
+
+- `public_assistant`
+- `internal_assistant`
+- `admin_only`
+
+`admin_only` content must never leak into public assistant retrieval.
 
 ---
 
@@ -366,13 +516,32 @@ Introduce shared abstractions only when:
 
 For non-trivial work, inspect the smallest relevant set of files first.
 
+For feature, module, architecture, cross-boundary, runtime-boundary, or unclear ownership work, read `docs/module-inventory.md` before selecting files to inspect. Treat it only as a starting index; verify ownership and behavior against the nearest source files before editing.
+
+For any work touching staff/user/department identity, read `docs/identity-contract.md` before inspecting implementation files.
+
+Inventory maintenance rules:
+- If a change adds, removes, renames, or moves a module, feature, route owner, runtime app, deploy/runtime boundary, or FE/API ownership mapping, update `docs/module-inventory.md` in the same change unless the user explicitly excludes documentation updates from scope.
+- If a change affects stack, runtime, tooling, CI/CD, deploy infrastructure, or production packaging, update `docs/tech-stack-inventory.md` in the same change unless the user explicitly excludes documentation updates from scope.
+- `docs/module-inventory.md` and `docs/tech-stack-inventory.md` are documentation indexes only; they do not replace source inspection, approval gates, or required verification.
+
 Minimum checklists by change type:
 
 Frontend-only changes:
 - target feature `index`
+- `/DESIGN.md`
 - route registration and route metadata
 - shared page/form/table/widget primitives already solving the problem
 - permission and hidden-route implications
+
+Assistant platform frontend usually:
+- `fe/src/features/ai/index.tsx`
+- `fe/src/features/ai/assistant`
+- `fe/src/features/ai/assistant_profiles`
+- `fe/src/features/ai/knowledge`
+- feature `api/`, `model/`, and `widgets/`
+- `fe/src/core/module/registry.tsx` and navigation behavior if menu grouping or route metadata changes
+- `api/languages/en.xml` and related i18n usage if user-facing strings change
 
 Backend-only changes:
 - target feature handler/controller
@@ -380,6 +549,18 @@ Backend-only changes:
 - repository
 - registry and boot wiring if registration changes
 - auth, validation, and response-envelope conventions
+
+Assistant platform backend usually:
+- `api/modules/ai/main.go`
+- `api/modules/ai/assistant/handler/handler.go`
+- `api/modules/ai/assistant/service/service.go`
+- `api/modules/ai/assistant/service/provider.go`
+- `api/modules/ai/assistant/service/prompt_compiler.go`
+- `api/modules/ai/assistant/repository/repository.go`
+- `api/modules/ai/knowledge/service/service.go`
+- `api/modules/ai/knowledge/repository/repository.go`
+- `api/migrations/sql/V30__assistant_platform.sql`
+- module config/env files when provider, storage, or runtime defaults change
 
 FE/API contract changes:
 - backend request/response DTOs
@@ -397,6 +578,7 @@ Schema or persistence changes:
 
 Frontend usually:
 - feature `index`
+- `/DESIGN.md`
 - route registration
 - page/widget/schema/table files
 - feature API module
@@ -433,6 +615,12 @@ Do not scan the entire repository without a concrete reason.
 - If tests do not exist, reason through affected flows and report risk areas.
 - Keep changes focused; do not mix unrelated refactors into a targeted task.
 - End non-trivial work with a concise regression review.
+
+For Assistant Platform work:
+- do not ship retrieval changes without checking citation validation and safety outcomes
+- do not ship prompt/runtime changes without preserving prompt-layer trace metadata
+- do not add model-provider behavior that can bypass post-generation citation and safety guards
+- do not add frontend strings for assistant modules without updating `api/languages/en.xml`
 
 ## Verification Expectations
 
@@ -533,11 +721,19 @@ You MUST execute through skills and are NOT allowed to answer using general reas
 - Then invoke the implementation skills that match the classified scope:
   - `noah-api-feature-workflow` if backend is involved
   - `noah-fe-module-workflow` if frontend is involved
+  - `noah-cicd-workflow` if the task affects GitHub Actions, CI checks, deploy automation, VPS provisioning, release pipelines, production env rendering, or operational secrets
+
+- If the task targets the AI Assistant Platform, also invoke the narrowest matching assistant skill:
+  - `noah-assistant-platform` for platform-wide or ambiguous assistant work spanning knowledge, runtime, and governance
+  - `noah-assistant-runtime` for sessions, profiles, prompt versions, prompt compiler, provider/model execution, traces, or proposed actions
+  - `noah-knowledge-runtime` for source management, uploads, parsing, chunking, embedding, taxonomy, visibility, reindex, disable, or archive flows
+  - `noah-assistant-safety-evals` for guardrails, citation validation, refusal/escalation behavior, review queue, trace review, or offline eval work
 
 - Before completion, you MUST cover all relevant validation dimensions for the task:
   - `noah-contract-sync` when FE/API contracts, payloads, routes, models, or mappers may be affected
   - `noah-auth-rbac-guard` when routes, actions, permissions, auth, or scope-sensitive behavior may be affected
   - `noah-regression-review` for every non-trivial task before sign-off
+  - `noah-cicd-workflow` validation when the task changes workflow entrypoints, deploy scripts, healthchecks, Docker production packaging, or secret handoff
 
 - Coverage is mandatory, but explicit invocation is conditional by scope and complexity.
 - Do not invoke unrelated skills only to satisfy ceremony.
@@ -554,15 +750,23 @@ Use the smallest orchestration shape that fully covers the task:
   - still classify with `noah-repo-architect` and apply any directly relevant skills
 
 - `medium` or ambiguous
-  - main agent may delegate discovery to `noah-boundary-explorer`
+  - main agent should automatically delegate discovery to `noah-boundary-explorer` when ownership, scope, or the minimum file set is not already clear
   - use this when the next edit depends on clarifying ownership, scope, or the minimum file set first
 
 - `cross-boundary`
-  - main agent may delegate independent implementation to `noah-api-worker` and `noah-fe-worker` in parallel
+  - main agent should automatically delegate independent implementation to `noah-api-worker` and `noah-fe-worker` in parallel when the write scopes are clearly separable
+  - main agent should automatically delegate CI/CD implementation to `noah-cicd-worker` when the write scope is `.github/**`, `deploy/**`, or tightly related production packaging files
   - use only when the write scopes are clearly separable between `api/**` and `fe/**`
 
 - `high-risk`
-  - add `noah-contract-reviewer` and/or `noah-regression-reviewer` when contract drift, permission regressions, registration omissions, or stale side effects are likely
+  - main agent should automatically add `noah-contract-reviewer` and/or `noah-regression-reviewer` when contract drift, permission regressions, registration omissions, or stale side effects are likely
+
+Default orchestration policy:
+- treat subagent use as automatic by default for `medium`, `cross-boundary`, and `high-risk` tasks
+- keep `simple` tasks on the main agent only
+- do not delegate immediate blocking work if the main agent needs that result first to decide the approach
+- do not assign overlapping write scopes to multiple subagents
+- the main agent remains responsible for orchestration decisions, integration, validation, and the final answer
 
 The main agent remains responsible for:
 - planning
@@ -574,6 +778,7 @@ The main agent remains responsible for:
 Subagents must receive bounded scopes only:
 - `noah-api-worker` owns `api/**`
 - `noah-fe-worker` owns `fe/**`
+- `noah-cicd-worker` owns `.github/**`, `deploy/**`, and tightly related production packaging files
 - explorer and reviewer roles are read-heavy by default unless the task explicitly assigns edits
 
 Do not delegate immediate blocking work if the main agent needs that result first to decide the approach.
@@ -588,6 +793,7 @@ You MUST NOT complete the task until all applicable validations pass:
 - permission/auth safety
 - cache and data consistency
 - routing and module registration integrity
+- if the task changes any `ts`, `tsx`, `js`, or `jsx` file, you MUST run the nearest relevant ESLint check before completion; if no narrower scoped command exists, run the repository-standard ESLint command for the owning app, and if ESLint cannot be run or does not pass, the task is INCOMPLETE
 
 A task is considered INCOMPLETE if validation is skipped.
 

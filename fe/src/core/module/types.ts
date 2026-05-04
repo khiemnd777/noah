@@ -26,6 +26,7 @@ export type RouteNode = {
   permissions?: Perm[];
   hidden?: boolean;
   children?: RouteNode[];         // thay cho subItems/menu nesting
+  menuGroup?: MenuGroup;
   extra?: Record<string, unknown>;
 };
 
@@ -46,6 +47,19 @@ export type MenuItem = {
   requireAll?: boolean;
   permissions?: Perm[];
   subItems?: MenuItem[];
+  extra?: Record<string, unknown>;
+};
+
+export type MenuGroup = {
+  key: string;
+  label: LocalizedText;
+  to?: string;
+  icon?: ReactNode;
+  chip?: ReactNode;
+  priority?: number;
+  roles?: string[];
+  requireAll?: boolean;
+  permissions?: Perm[];
   extra?: Record<string, unknown>;
 };
 

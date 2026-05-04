@@ -28,6 +28,15 @@ services:
     volumes:
       - ${REDISDATA_DIR}:/data
 
+  frontend:
+    build:
+      context: ../fe
+      dockerfile: Dockerfile.prod
+    container_name: ${APP_NAME}_frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_HOST_PORT}:80"
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -52,7 +61,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "${PORT}:${PORT}"
+      - "127.0.0.1:${API_HOST_PORT}:${PORT}"
     volumes:
       - api_storage:${STORAGE_ROOT}
       - api_gocache:${GOCACHE}

@@ -66,9 +66,11 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml down -v
 - Shared `APP_*` variables live in the repository root `.env*` files. Backend-only variables stay in `/api/.env*`.
 - Dev mặc định dùng bộ file không hậu tố: `/api/.env`, `/api/Dockerfile`, `/api/docker-compose.yml`.
 - Production-like dùng bộ file hậu tố `.prod`: `/api/.env.prod`, `/api/Dockerfile.prod`, `/api/docker-compose.prod.yml`.
+- Production compose hiện chạy 4 service: `frontend`, `api`, `postgres`, `redis`.
 - API container nạp shared env từ `../.env` hoặc `../.env.prod` trước, rồi mới nạp `/api/.env*` để giữ precedence `shared root -> app-specific`.
 - Dữ liệu Postgres và Redis được mount từ `PGDATA_DIR` và `REDISDATA_DIR` trong file env tương ứng.
 - Với dev, Compose đọc trực tiếp `.env`; với production-like, hãy luôn chạy kèm `--env-file .env.prod`.
+- Production publish `frontend` ra `127.0.0.1:${FRONTEND_HOST_PORT}` và `api` ra `127.0.0.1:${API_HOST_PORT}` để host Nginx reverse proxy cùng domain công khai.
 - `run.sh` và `start_app.sh` sẽ nạp `./.env` mặc định, và tự chuyển sang `./.env.prod` khi `APP_ENV=production`.
 - App chỉ dùng một nhánh cấu hình: `config.yaml` và `modules/*/config.yaml`, với giá trị lấy từ `.env`.
 - Local dev compose mount source code vào container để giữ workflow chỉnh code nhanh.

@@ -20,8 +20,9 @@ Promtail is selected for local stack because it is the smallest reliable integra
 - `.env`
 - `.env.prod`
 - `observability/loki-config.yaml`
-- `observability/promtail-config.yaml`
-- `observability/grafana/provisioning/datasources/loki.yaml`
+- `observability/promtail-config.yaml.tmpl`
+- `observability/grafana/provisioning/datasources/loki.yaml.tmpl`
+- `scripts/render_observability_config.sh`
 - `observability_up.sh`
 - `observability_down.sh`
 - `run_with_observability.sh`
@@ -40,6 +41,7 @@ Production-shaped local run:
 
 This command will:
 
+- render Promtail và Grafana datasource config từ env hiện tại
 - start Loki, Promtail, and Grafana
 - mirror Luca API stdout/stderr into the Promtail watched file
 - run the backend with the selected `APP_ENV`
@@ -53,7 +55,14 @@ If you want to start only the observability stack without running the API, you c
 After start:
 
 - Grafana: `http://127.0.0.1:3001` (`admin/admin`)
-- Loki ready endpoint: `http://127.0.0.1:3100/ready`
+- Loki ready endpoint: `http://127.0.0.1:${LOKI_HOST_PORT}/ready`
+
+Promtail config được render từ `LOKI_BASE_URL` nếu có, hoặc derive từ:
+
+- `LOKI_SCHEME`
+- `LOKI_HOST`
+- `LOKI_PORT`
+- `LOKI_HOST_PORT`
 
 Promtail tails:
 
@@ -75,7 +84,7 @@ High-cardinality fields (`request_id`, `user_id`, `department_id`) are parsed bu
 Query recent warn/error logs from Loki:
 
 ```bash
-curl -G "http://127.0.0.1:3100/loki/api/v1/query_range" \
+curl -G "http://127.0.0.1:${LOKI_HOST_PORT:-3100}/loki/api/v1/query_range" \
   --data-urlencode 'query={app="noah_api"} | json | level=~"warn|error"' \
   --data-urlencode 'limit=20'
 ```

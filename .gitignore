@@ -5,6 +5,10 @@
 .env.*
 !.env.sample
 !**/.env.sample
+deploy/config/project.env
+deploy/generated/
+api/observability/promtail-config.yaml
+api/observability/grafana/provisioning/datasources/loki.yaml
 
 # Local data and caches
 .data/

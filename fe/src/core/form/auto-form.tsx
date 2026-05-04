@@ -1247,9 +1247,13 @@ export const AutoForm = React.forwardRef<AutoFormRef, Props>(
 
       const latestValues = ctxRef.current!.values;
       const packaged = packageData(metadataBlocks, latestValues);
+      const shouldUsePackagedValues =
+        metadataBlocks.length > 0 || typeof resolvedSchema.hooks?.mapToDto === "function";
       const dto = resolvedSchema.hooks?.mapToDto
         ? resolvedSchema.hooks.mapToDto(packaged)
-        : packaged;
+        : shouldUsePackagedValues
+          ? packaged
+          : latestValues;
 
       const ctx = {
         values: dto,

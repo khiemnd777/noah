@@ -27,6 +27,18 @@ validate_skills() {
 
   [[ -d "$source_dir" ]] || fail "Skills source directory not found: $source_dir"
 
+  while IFS= read -r -d '' entry; do
+    if [[ -d "$entry" ]]; then
+      continue
+    fi
+
+    if [[ "$(basename "$entry")" == "README.md" ]]; then
+      continue
+    fi
+
+    fail "Unexpected non-skill artifact in skills source directory: $entry"
+  done < <(find "$source_dir" -mindepth 1 -maxdepth 1 -print0 | sort -z)
+
   while IFS= read -r -d '' skill_dir; do
     found_skill=1
 
@@ -44,14 +56,14 @@ validate_skills() {
     assert_contains "$skill_md" '^description: .+$' "Missing frontmatter description"
 
     agents_yaml="$skill_dir/agents/openai.yaml"
-    if [[ -f "$agents_yaml" ]]; then
-      assert_contains "$agents_yaml" '^interface:$' "Missing interface block in openai.yaml"
-      assert_contains "$agents_yaml" '^  display_name: ".+"$' "Missing display_name in openai.yaml"
-      assert_contains "$agents_yaml" '^  short_description: ".+"$' "Missing short_description in openai.yaml"
+    [[ -f "$agents_yaml" ]] || fail "Missing agents/openai.yaml for skill '$skill_name'"
 
-      if grep -Eq '^  default_prompt: ' "$agents_yaml"; then
-        assert_contains "$agents_yaml" "\\\$${skill_name}" "default_prompt must mention \$${skill_name}"
-      fi
+    assert_contains "$agents_yaml" '^interface:$' "Missing interface block in openai.yaml"
+    assert_contains "$agents_yaml" '^  display_name: ".+"$' "Missing display_name in openai.yaml"
+    assert_contains "$agents_yaml" '^  short_description: ".+"$' "Missing short_description in openai.yaml"
+
+    if grep -Eq '^  default_prompt: ' "$agents_yaml"; then
+      assert_contains "$agents_yaml" "\\\$${skill_name}" "default_prompt must mention \$${skill_name}"
     fi
   done < <(find "$source_dir" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 
@@ -65,7 +77,7 @@ validate_subagents() {
 
   [[ -d "$source_dir" ]] || fail "Subagents source directory not found: $source_dir"
 
-  python3 - "$source_dir" <<'PY'
+  python3 - "$source_dir" "$SKILLS_SOURCE_DIR" <<'PY'
 import sys
 from pathlib import Path
 
@@ -75,6 +87,7 @@ except ModuleNotFoundError as exc:
     raise SystemExit(f"Validation failed: tomllib is required to validate subagents ({exc})")
 
 source_dir = Path(sys.argv[1])
+skills_source_dir = Path(sys.argv[2])
 files = sorted(source_dir.glob("*.toml"))
 
 if not files:
@@ -110,6 +123,19 @@ for path in files:
     if sandbox_mode is not None and sandbox_mode not in {"read-only", "workspace-write", "danger-full-access"}:
         raise SystemExit(f"Validation failed: invalid sandbox_mode '{sandbox_mode}' in {path}")
 
+    instructions = data["developer_instructions"]
+    if sandbox_mode == "workspace-write" and (
+        "Do not edit files unless the parent agent explicitly states the user approved the edit plan."
+        not in instructions
+    ):
+        raise SystemExit(f"Validation failed: workspace-write subagent missing approval gate in {path}")
+
+    if ("reviewer" in name or "explorer" in name) and sandbox_mode != "read-only":
+        raise SystemExit(f"Validation failed: reviewer/explorer subagent must be read-only in {path}")
+
+    if "do not revert edits you did not make" not in instructions.lower():
+        raise SystemExit(f"Validation failed: subagent must protect unrelated edits in {path}")
+
     skills = data.get("skills")
     if skills is not None:
         if not isinstance(skills, dict):
@@ -138,6 +164,23 @@ for path in files:
                 ):
                     raise SystemExit(
                         f"Validation failed: skills.config path must start with __CODEX_HOME__/skills/ or / in {path}"
+                    )
+
+                if skill_path.startswith("__CODEX_HOME__/skills/"):
+                    parts = Path(skill_path.replace("__CODEX_HOME__/skills/", "", 1)).parts
+                    if len(parts) != 2 or parts[1] != "SKILL.md":
+                        raise SystemExit(
+                            f"Validation failed: skills.config path must target __CODEX_HOME__/skills/<skill>/SKILL.md in {path}"
+                        )
+
+                    source_skill = skills_source_dir / parts[0] / "SKILL.md"
+                    if not source_skill.exists():
+                        raise SystemExit(
+                            f"Validation failed: skills.config references missing repo skill '{parts[0]}' in {path}"
+                        )
+                elif not Path(skill_path).exists():
+                    raise SystemExit(
+                        f"Validation failed: skills.config references missing absolute skill path '{skill_path}' in {path}"
                     )
 
                 enabled = entry.get("enabled")

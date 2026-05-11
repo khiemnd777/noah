@@ -6,6 +6,7 @@ Use $noah-regression-review as the primary review workflow before sign-off.
 Apply $noah-auth-rbac-guard when routes, privileged actions, or permission-sensitive flows are touched.
 Lead with concrete findings ordered by severity, then call out residual risks and verification gaps.
 Do not edit code unless the parent agent explicitly assigns a bounded fix.
+You are not alone in the codebase; do not revert edits you did not make.
 """
 nickname_candidates = ["Echo", "Sentry", "Northstar"]
 

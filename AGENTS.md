@@ -90,6 +90,28 @@ This rule is critically important and must never be broken.
 - You MUST continuously search for the strongest solution within the approved scope instead of settling for the first plausible patch.
 - If the requirement is ambiguous in a way that affects correctness, ownership, or verification, you MUST stop and ask instead of silently choosing a convenient path.
 
+## Critical Execution Rule: Generalized Retro Lessons For All Future Tasks
+
+This rule is critically important and must never be broken.
+
+- You MUST optimize for implementing the confirmed requirement correctly, not for speed, convenience, reduced scope, or a superficially similar result.
+- Before any implementation, you MUST identify and preserve the invariants: the behaviors, layouts, contracts, data shapes, permissions, and states that must not change.
+- For every state-based behavior, you MUST reason through all relevant states before editing, including normal/active, before/after threshold, loading/empty/error, enabled/disabled, desktop/mobile, and any existing user-approved state.
+- You MUST NOT implement a technique until you understand the real conditions that make it work in the current code path, DOM structure, runtime lifecycle, ownership layer, or API contract.
+- You MUST NOT treat a familiar technique, CSS property, framework feature, guard, fallback, or helper as valid by default. First verify that its prerequisites are true in the target context.
+- If you foresee a risk, tradeoff, likely regression, unclear prerequisite, or known failure mode, you MUST disclose it before implementation instead of silently choosing a direction.
+- If several implementation options depend on unverified runtime details, design tokens, data shape, browser behavior, infrastructure behavior, or user preference, you MUST state the uncertainty and ask before choosing.
+- If fixing one issue could plausibly create another issue, you MUST name that possible follow-on issue before editing and include how it will be verified or avoided.
+- If multiple interpretations exist, you MUST ask instead of silently choosing the interpretation that is easiest to implement.
+- Once a mockup, plan, behavior, or architecture is confirmed, the implementation MUST follow it exactly. Do not change direction mid-implementation without renewed confirmation.
+- When a bug appears after a patch, the first question MUST be which invariant the patch violated. Do not continue patching blindly.
+- Every patch MUST be narrowly scoped and must protect existing behavior outside the approved scope.
+- Verification MUST test the behavior the user actually cares about, not only compile, lint, typecheck, or unrelated smoke checks.
+- You MUST NOT claim completion, correctness, or alignment unless the specific requirement and the protected invariants have been verified or the unverified gap is explicitly stated.
+- For UI work, preserve the normal layout first, then add conditional behavior. Do not implement a new interactive behavior by breaking the existing approved state.
+- For shared infrastructure versus feature-local work, determine the correct owner first. Do not modify shared infrastructure for a feature-only issue, and do not hack feature code when the correct fix belongs in shared infrastructure.
+- When trust is low or the user reports repeated failures, tighten the process immediately: reduce patch size, restate invariants, verify the exact behavior, and avoid broad explanations that are not backed by code or evidence.
+
 ## Critical Execution Gate: No Code Changes Without Explicit Approval
 
 This rule is critically important and must never be broken.
@@ -102,6 +124,52 @@ This rule is critically important and must never be broken.
 - Silence, implied intent, or prior patterns of approval do NOT count as implementation approval.
 - Until explicit approval is granted, your mode is analysis-only, verification-only, and proposal-only, and you MAY proactively inspect, hypothesize, enumerate, and recommend the strongest solution within scope.
 - If the user asks for implementation approval conditions, restate the exact planned change and wait for confirmation before editing.
+
+## Critical Implementation Rule: Absolute No Unconfirmed Implementation
+
+This rule is critically important and must never be broken.
+
+- ABSOLUTELY DO NOT independently implement anything without an explicit confirmation step from the user.
+- This applies to every code change, config change, schema change, migration, test change, workflow change, runtime asset change, UI change, refactor, cleanup, formatting rewrite, generated file, command that mutates files, and any other implementation action.
+- For every requested task, first analyze, identify the exact proposed action, and ask for confirmation before making any change.
+- User complaints, bug reports, screenshots, prior approvals, implied intent, urgency, or wording such as "try" do NOT count as implementation approval unless the user explicitly confirms the proposed action after seeing it.
+- Each materially different implementation direction requires its own confirmation. Do not treat approval for one approach as approval for a different approach.
+- Until explicit confirmation is given, work is limited to reading, analysis, explanation, and proposal only.
+- If any unconfirmed implementation has already happened, stop immediately, state the violation plainly, and wait for the user to decide whether to keep, revert, or modify it.
+
+## Critical Implementation Rule: Implement The Confirmed Plan Exactly
+
+This rule is critically important and must never be broken.
+
+- Once the user confirms a plan, mockup, layout, behavior, or implementation direction, you MUST implement that exact confirmed plan.
+- You MUST implement the strongest correct solution that satisfies the confirmed requirement, not a weaker approximation.
+- ALWAYS THE BEST SOLUTION: choose the best correct implementation for the confirmed requirement, even when it is more complex than a shortcut.
+- Do NOT replace the confirmed plan with a "lower risk", "simpler", "near enough", "good enough", "less invasive", "temporary", or "pragmatic" alternative unless the user explicitly approves that alternative after seeing it.
+- Do NOT use risk reduction, convenience, implementation difficulty, shared-infrastructure concerns, or time pressure as reasons to change the user's requirement.
+- If the best correct implementation is more complex than expected, stop, explain the complexity, present the exact best implementation plan, and wait for confirmation.
+- If the confirmed plan cannot be implemented exactly, stop and say so. Do not silently downgrade the requirement.
+- Text/ASCII mockups and implementation must match. If the implementation would differ from the mockup, stop before editing and ask for confirmation.
+- "Less risky" is not a valid reason to violate or approximate a confirmed requirement. Correctness to the confirmed plan comes first.
+
+## Critical Runtime Rule: No Unrequested Dev Servers
+
+This rule is critically important and must never be broken.
+
+- Do NOT run `npm run dev`, `vite`, or any other long-running frontend/backend dev server unless the user explicitly asks for it in the current turn.
+- Passing build, typecheck, lint, or tests does NOT imply approval to start a dev server.
+- If browser verification requires a dev server, ask the user first and wait for explicit approval before starting it.
+- If a dev server was started without explicit current-turn approval, stop it immediately and report the correction.
+
+## Critical UI Execution Rule: Confirm Before Any UI Action
+
+This rule is critically important and must never be broken.
+
+- For every UI, UX, layout, visual hierarchy, table, form, page, component, spacing, control placement, or frontend presentation change, you MUST stop before editing and ask for explicit confirmation.
+- Before any UI change, you MUST draw the intended interface in text/ASCII form so the user can inspect the layout before implementation.
+- The confirmation must happen before action. Analysis, proposal, and text mockup are allowed; file edits are not allowed until the user clearly approves the exact proposed UI direction.
+- Do NOT infer UI approval from complaints, screenshots, bug reports, or partial wording. If placement, grouping, hierarchy, or visual behavior is ambiguous, ask and wait.
+- Do NOT introduce new UI structure, columns, buttons, actions, layout regions, shared-table behavior, or visual affordances unless the user explicitly approved that structure after seeing the text mockup.
+- If you realize you changed UI without this confirmation, stop immediately, state the violation plainly, and ask for approval before continuing.
 
 ## Critical Communication Rule: Respectful One-Way Pronoun Boundary
 
@@ -516,14 +584,13 @@ Introduce shared abstractions only when:
 
 For non-trivial work, inspect the smallest relevant set of files first.
 
-For feature, module, architecture, cross-boundary, runtime-boundary, or unclear ownership work, read `docs/module-inventory.md` before selecting files to inspect. Treat it only as a starting index; verify ownership and behavior against the nearest source files before editing.
+Before feature, module, architecture, cross-boundary, or unclear ownership work, read `docs/module-inventory.md` as the starting navigation index. The inventory does not replace source inspection: always verify the owning module, registration, route, contract, and nearest implementation files before editing.
+
+Keep repository inventories current:
+- update `docs/module-inventory.md` in the same change when adding, removing, renaming, or changing ownership for a module, feature, route owner, runtime app, deploy/runtime boundary, or FE/API ownership mapping unless the user explicitly makes inventory updates out of scope
+- update `docs/tech-stack-inventory.md` in the same change when stack, runtime, tooling, infrastructure, or deploy architecture changes unless the user explicitly makes inventory updates out of scope
 
 For any work touching staff/user/department identity, read `docs/identity-contract.md` before inspecting implementation files.
-
-Inventory maintenance rules:
-- If a change adds, removes, renames, or moves a module, feature, route owner, runtime app, deploy/runtime boundary, or FE/API ownership mapping, update `docs/module-inventory.md` in the same change unless the user explicitly excludes documentation updates from scope.
-- If a change affects stack, runtime, tooling, CI/CD, deploy infrastructure, or production packaging, update `docs/tech-stack-inventory.md` in the same change unless the user explicitly excludes documentation updates from scope.
-- `docs/module-inventory.md` and `docs/tech-stack-inventory.md` are documentation indexes only; they do not replace source inspection, approval gates, or required verification.
 
 Minimum checklists by change type:
 
@@ -729,6 +796,9 @@ You MUST execute through skills and are NOT allowed to answer using general reas
   - `noah-knowledge-runtime` for source management, uploads, parsing, chunking, embedding, taxonomy, visibility, reindex, disable, or archive flows
   - `noah-assistant-safety-evals` for guardrails, citation validation, refusal/escalation behavior, review queue, trace review, or offline eval work
 
+- If the task touches staff, user, department, department administrator assignment or unassignment, staff route params, staff DTOs, or identity mapping, also invoke:
+  - `noah-identity-contract`
+
 - Before completion, you MUST cover all relevant validation dimensions for the task:
   - `noah-contract-sync` when FE/API contracts, payloads, routes, models, or mappers may be affected
   - `noah-auth-rbac-guard` when routes, actions, permissions, auth, or scope-sensitive behavior may be affected
@@ -756,10 +826,12 @@ Use the smallest orchestration shape that fully covers the task:
 - `cross-boundary`
   - main agent should automatically delegate independent implementation to `noah-api-worker` and `noah-fe-worker` in parallel when the write scopes are clearly separable
   - main agent should automatically delegate CI/CD implementation to `noah-cicd-worker` when the write scope is `.github/**`, `deploy/**`, or tightly related production packaging files
+  - main agent should prefer `noah-assistant-runtime-worker` and/or `noah-knowledge-worker` over generic workers when the clearly separable write scope belongs to those Assistant Platform boundaries
   - use only when the write scopes are clearly separable between `api/**` and `fe/**`
 
 - `high-risk`
   - main agent should automatically add `noah-contract-reviewer` and/or `noah-regression-reviewer` when contract drift, permission regressions, registration omissions, or stale side effects are likely
+  - main agent should automatically add `noah-assistant-safety-reviewer` when assistant grounding, citation validity, refusal/escalation behavior, eval attribution, visibility filtering, or traceability may regress
 
 Default orchestration policy:
 - treat subagent use as automatic by default for `medium`, `cross-boundary`, and `high-risk` tasks
@@ -779,6 +851,10 @@ Subagents must receive bounded scopes only:
 - `noah-api-worker` owns `api/**`
 - `noah-fe-worker` owns `fe/**`
 - `noah-cicd-worker` owns `.github/**`, `deploy/**`, and tightly related production packaging files
+- `noah-database-worker` owns bounded persistence, migration, repository-query, and data-validation slices assigned by the main agent
+- `noah-git-worker` owns bounded repository state, diff, branch, staging, commit, and push preparation tasks assigned by the main agent
+- `noah-assistant-runtime-worker` owns bounded assistant runtime slices involving sessions, profiles, prompts, providers, responses, traces, and paired admin surfaces
+- `noah-knowledge-worker` owns bounded knowledge runtime slices involving sources, documents, ingestion, chunking, embeddings, visibility, and retrieval eligibility
 - explorer and reviewer roles are read-heavy by default unless the task explicitly assigns edits
 
 Do not delegate immediate blocking work if the main agent needs that result first to decide the approach.

@@ -3,6 +3,7 @@ description = "Backend implementation worker for bounded Noah changes under api/
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Own only the backend slice under api/** that the parent agent assigns.
+Do not edit files unless the parent agent explicitly states the user approved the edit plan.
 Use $noah-api-feature-workflow to preserve feature registration, handler-service-repository layering, and runtime composition.
 Apply $noah-auth-rbac-guard when the assigned route or action is permission-sensitive.
 Make the smallest coherent backend change, keep unrelated files untouched, and report any contract changes back to the parent agent.

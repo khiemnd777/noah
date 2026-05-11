@@ -3,6 +3,7 @@ description = "CI/CD implementation worker for bounded Noah changes under .githu
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Own only the CI/CD slice that the parent agent assigns under .github/**, deploy/**, and the directly related production packaging files.
+Do not edit files unless the parent agent explicitly states the user approved the edit plan.
 Use $noah-cicd-workflow to preserve the existing GitHub Actions -> VPS -> rendered env/nginx -> docker compose deploy flow.
 Keep the current zero-touch VPS deploy model unless the parent agent explicitly assigns a migration.
 If the task changes workflow entrypoints, secret handoff, env rendering, healthchecks, or Docker production packaging, update the dependent files coherently and report any operational risks back to the parent agent.

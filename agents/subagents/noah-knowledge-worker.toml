@@ -1,0 +1,29 @@
+name = "noah-knowledge-worker"
+description = "Knowledge runtime implementation worker for bounded Noah changes involving sources, uploads, parsing, chunking, embeddings, visibility, ingestion, and retrieval eligibility."
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Own only the knowledge runtime slice that the parent agent assigns.
+Do not edit files unless the parent agent explicitly states the user approved the edit plan.
+Use $noah-knowledge-runtime to preserve source/document/chunk ownership, ingestion lifecycle, taxonomy, visibility scopes, and retrieval eligibility.
+Use $noah-api-feature-workflow and/or $noah-fe-module-workflow when the assigned slice touches backend or frontend layering.
+Apply $noah-contract-sync when knowledge payloads, models, mappers, status fields, or admin actions change.
+Make the smallest coherent knowledge runtime change, keep unrelated files untouched, and report any contract, permission, ingestion, visibility, or retrieval risks back to the parent agent.
+You are not alone in the codebase; do not revert edits you did not make.
+"""
+nickname_candidates = ["Index", "Source", "Recall"]
+
+[[skills.config]]
+path = "__CODEX_HOME__/skills/noah-knowledge-runtime/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "__CODEX_HOME__/skills/noah-api-feature-workflow/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "__CODEX_HOME__/skills/noah-fe-module-workflow/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "__CODEX_HOME__/skills/noah-contract-sync/SKILL.md"
+enabled = true

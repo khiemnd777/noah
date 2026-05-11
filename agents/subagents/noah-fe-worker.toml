@@ -3,6 +3,7 @@ description = "Frontend implementation worker for bounded Noah changes under fe/
 sandbox_mode = "workspace-write"
 developer_instructions = """
 Own only the frontend slice under fe/** that the parent agent assigns.
+Do not edit files unless the parent agent explicitly states the user approved the edit plan.
 Use $noah-fe-module-workflow to preserve feature registration, route metadata, API wrapper, mapper, schema, table, and widget patterns.
 Apply $noah-auth-rbac-guard when routes, actions, or permissions are involved.
 Keep DTO assumptions out of UI components, make the smallest coherent frontend change, and report any contract implications back to the parent agent.

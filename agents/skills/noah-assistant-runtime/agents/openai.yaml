@@ -1,0 +1,7 @@
+interface:
+  display_name: "Noah Assistant Runtime"
+  short_description: "Work on Noah assistant sessions, prompts, providers, traces, and responses"
+  default_prompt: "Use $noah-assistant-runtime to handle this Noah assistant runtime change across sessions, profiles, prompt versions, provider execution, response shaping, and traces."
+
+policy:
+  allow_implicit_invocation: true

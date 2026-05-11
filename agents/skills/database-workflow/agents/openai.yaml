@@ -1,0 +1,7 @@
+interface:
+  display_name: "Database Workflow"
+  short_description: "Trace database schema, query, and migration changes safely"
+  default_prompt: "Use $database-workflow to inspect this database task through schema, migration, repository, transaction, and data-integrity boundaries."
+
+policy:
+  allow_implicit_invocation: true

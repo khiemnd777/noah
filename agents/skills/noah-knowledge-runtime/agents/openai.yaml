@@ -1,0 +1,7 @@
+interface:
+  display_name: "Noah Knowledge Runtime"
+  short_description: "Work on Noah knowledge sources, ingestion, chunking, and retrieval"
+  default_prompt: "Use $noah-knowledge-runtime to handle this Noah knowledge runtime change across sources, uploads, parsing, chunking, embeddings, visibility, and retrieval eligibility."
+
+policy:
+  allow_implicit_invocation: true

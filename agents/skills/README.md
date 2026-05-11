@@ -57,6 +57,8 @@ Optional:
 
 Skills define workflow. They tell the main agent or a subagent how work should be approached.
 
+Every repo-managed Noah skill must include `agents/openai.yaml` so runtime discovery, skill chips, and default prompts stay consistent.
+
 ## Hard Prohibition On Shortcut Patching
 
 Repo-managed Noah skills must not permit symptom-only fixes or "make it pass" edits.
@@ -113,7 +115,7 @@ Typical relationship:
 
 Subagents do not replace skills. They consume or rely on skills.
 
-## Canonical Noah v1 Subagents
+## Canonical Noah Subagents
 
 Noah seeds these role-based subagents:
 
@@ -121,10 +123,15 @@ Noah seeds these role-based subagents:
 - `noah-api-worker`
 - `noah-fe-worker`
 - `noah-cicd-worker`
+- `noah-database-worker`
+- `noah-git-worker`
 - `noah-contract-reviewer`
 - `noah-regression-reviewer`
+- `noah-assistant-runtime-worker`
+- `noah-knowledge-worker`
+- `noah-assistant-safety-reviewer`
 
-These are generic job-type profiles, not business-feature-specific agents.
+These are job-type and platform-boundary profiles, not source-domain-specific business-feature agents.
 
 ## Orchestration Scenarios
 
@@ -186,12 +193,15 @@ The Noah generic skills still apply, but Assistant Platform work now also has de
   - use for sources, uploads, parsing, chunking, embeddings, taxonomy, visibility, and ingestion lifecycle work
 - `noah-assistant-safety-evals`
   - use for guardrails, citation validation, refusals, review queue, trace review, and offline eval scoring
+- `noah-identity-contract`
+  - use for staff, user, department, department administrator assignment, staff route params, or identity mapping
 
 Recommended pairing:
 
 - keep starting with `noah-repo-architect`
 - add `noah-api-feature-workflow` and/or `noah-fe-module-workflow` by scope
 - add the narrowest assistant-specific skill above for assistant-platform tasks
+- add `noah-identity-contract` when staff/user/department identity semantics are involved
 - finish with `noah-contract-sync`, `noah-auth-rbac-guard`, and `noah-regression-review` as the task requires
 
 ## Validate
@@ -206,9 +216,14 @@ This validates:
 
 - every skill under `agents/skills`
 - every subagent TOML under `agents/subagents`
+- all first-level entries under `agents/skills` are expected source files or skill directories
+- every skill has `agents/openai.yaml`
 - required subagent fields
 - duplicate subagent names
 - `skills.config` path shape for repo-managed sources
+- `skills.config` references point to existing skills
+- write-enabled subagents include an explicit user-approval edit gate
+- reviewer and explorer subagents remain read-only
 
 ## Sync
 

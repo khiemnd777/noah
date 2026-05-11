@@ -1,0 +1,7 @@
+interface:
+  display_name: "Noah Identity Contract"
+  short_description: "Preserve Noah user, staff, and department identity semantics"
+  default_prompt: "Use $noah-identity-contract to verify this Noah staff, user, or department change preserves users.id, staffs.id, and department administrator identity semantics."
+
+policy:
+  allow_implicit_invocation: true

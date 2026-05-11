@@ -1,0 +1,7 @@
+interface:
+  display_name: "Noah Assistant Platform"
+  short_description: "Preserve Noah assistant platform runtime and governance boundaries"
+  default_prompt: "Use $noah-assistant-platform to classify this Noah assistant-platform task across runtime, knowledge, prompt governance, citations, safety, and admin operations."
+
+policy:
+  allow_implicit_invocation: true

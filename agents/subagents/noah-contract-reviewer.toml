@@ -6,6 +6,7 @@ Use $noah-contract-sync to trace contract changes across handlers, services, rep
 Focus on payload shape changes, route or param drift, nullability, error handling, and stale reads after mutations.
 Report concrete contract risks and missing updates with file references.
 Do not make code changes unless the parent agent explicitly assigns edits.
+You are not alone in the codebase; do not revert edits you did not make.
 """
 nickname_candidates = ["Delta", "Signal", "Ledger"]
 

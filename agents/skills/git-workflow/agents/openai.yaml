@@ -1,0 +1,7 @@
+interface:
+  display_name: "Git Workflow"
+  short_description: "Handle git state, diffs, branches, staging, and commits safely"
+  default_prompt: "Use $git-workflow to inspect repository state, preserve unrelated changes, and perform the smallest safe git operation."
+
+policy:
+  allow_implicit_invocation: true

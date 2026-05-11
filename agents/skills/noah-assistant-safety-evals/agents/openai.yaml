@@ -1,0 +1,7 @@
+interface:
+  display_name: "Noah Assistant Safety Evals"
+  short_description: "Review Noah assistant guardrails, citations, refusals, and evals"
+  default_prompt: "Use $noah-assistant-safety-evals to verify this Noah assistant safety or eval change preserves groundedness, citations, refusals, reviewability, and scoring attribution."
+
+policy:
+  allow_implicit_invocation: true

@@ -164,8 +164,8 @@ func StartFiber(fiberApp *fiber.App, moduleName string) {
 	// destPort := getDestPort(port)
 	addr := fmt.Sprintf("%s:%d", host, port)
 
-	// 2) Bind đúng cổng (KHÔNG ListenOnAvailablePort nữa)
-	reserved, err := app.ListenOnAvailablePort(host, port)
+	// 2) Bind đúng cổng đã đăng ký cho gateway proxy target.
+	reserved, err := app.ListenOnAvailablePortStrict(host, port)
 
 	if err != nil {
 		logger.Error(fmt.Sprintf("❌ Cannot start listener: %v", err))

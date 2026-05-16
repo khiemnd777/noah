@@ -1,78 +1,57 @@
 package runner
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/khiemnd777/noah_api/shared/config"
 	"github.com/khiemnd777/noah_api/shared/runtime"
 	"github.com/khiemnd777/noah_api/shared/utils"
 )
 
-const moduleStartTimeout = 30 * time.Second
+const (
+	moduleStartTimeout = 30 * time.Second
+	namespaceGuidance  = "Run this command inside the API container: docker compose exec api go run ./scripts/module_runner <cmd> ..."
+)
 
-type RunningModule struct {
-	PID   int       `json:"pid"`
-	Host  string    `json:"host"`
-	Port  int       `json:"port"`
-	RunAt time.Time `json:"run_at"`
-}
-
-type RunningModules map[string]RunningModule
-
-func loadModuleConfig(module string) (host string, port int, err error) {
-	// 1️⃣  Ưu tiên runtime registry (dynamic port)
-	if reg, _ := runtime.LoadRegistry(); reg != nil {
-		if m, ok := reg[module]; ok && m.Port != 0 {
-			return m.Host, m.Port, nil
-		}
+func EnsureRuntimeNamespaceForMutation() error {
+	if isInsideContainer() {
+		return nil
 	}
-
-	// 2️⃣  Fallback: đọc config.yaml (cổng tĩnh)
-	path := utils.GetModuleConfigPath(module)
-	cfg, err := utils.LoadConfig[struct {
-		Server struct {
-			Host string `yaml:"host"`
-			Port int    `yaml:"port"`
-		} `yaml:"server"`
-	}](path)
+	running, err := composeAPIContainerRunning()
 	if err != nil {
-		return "", 0, err
+		return err
+	}
+	if !running {
+		return nil
 	}
 
-	// Nếu port vẫn =0 → báo lỗi rõ ràng
-	if cfg.Server.Port == 0 {
-		return "", 0, fmt.Errorf("module [%s] has dynamic port=0 and no runtime entry", module)
-	}
-
-	return cfg.Server.Host, cfg.Server.Port, nil
-}
-
-func getDestPort(port int) int {
-	mCfg, _ := utils.LoadConfig[config.AppConfig](utils.GetAppConfigPath())
-	mPort := mCfg.Server.Port
-	return mPort + port
+	return fmt.Errorf("runtime namespace mismatch: API container is running. %s", namespaceGuidance)
 }
 
 func StartModule(module string) error {
-	host, port, err := loadModuleConfig(module)
+	if err := EnsureRuntimeNamespaceForMutation(); err != nil {
+		return err
+	}
+
+	entry, err := runtime.EnsureModuleEntry(module)
 	if err != nil {
 		return err
 	}
 
-	if utils.CheckPortOpen(host, port) {
-		return fmt.Errorf("❌ Port %d on host %s is already in use", port, host)
+	if utils.CheckPortOpen(entry.Host, entry.Port) {
+		if pid, err := utils.DetectPIDFromPort(entry.Port); err == nil {
+			return fmt.Errorf("❌ Port %d on host %s is already in use by PID %d", entry.Port, entry.Host, pid)
+		}
+		return fmt.Errorf("❌ Port %d on host %s is already in use but listener PID could not be detected", entry.Port, entry.Host)
 	}
 
-	fmt.Printf("🚀 Starting module '%s' on %s:%d...\n", module, host, port)
+	fmt.Printf("🚀 Starting module '%s' on %s:%d...\n", module, entry.Host, entry.Port)
 	cmd := exec.Command("go", "run", utils.GetFullPath("modules", module, "main.go"))
 	cmd.Env = append(os.Environ(), "GATEWAY_MODE=true")
 	cmd.Stdout = os.Stdout
@@ -82,10 +61,19 @@ func StartModule(module string) error {
 		return fmt.Errorf("❌ Failed to start module: %w", err)
 	}
 
-	if err := waitForModuleReady(cmd, host, port, moduleStartTimeout); err != nil {
-		return fmt.Errorf("❌ Module '%s' failed to become ready on %s:%d: %w", module, host, port, err)
+	if err := waitForModuleReady(cmd, entry.Host, entry.Port, moduleStartTimeout); err != nil {
+		return fmt.Errorf("❌ Module '%s' failed to become ready on %s:%d: %w", module, entry.Host, entry.Port, err)
 	}
 
+	status, pid, err := syncModuleState(module, entry)
+	if err != nil {
+		return err
+	}
+	if status == "STALE" {
+		return fmt.Errorf("❌ Module '%s' opened %s:%d but listener PID could not be detected", module, entry.Host, entry.Port)
+	}
+
+	fmt.Printf("✅ Module '%s' is running on %s:%d (PID: %d)\n", module, entry.Host, entry.Port, pid)
 	return nil
 }
 
@@ -105,113 +93,138 @@ func StartModulesInBatch(modules []string) error {
 }
 
 func StopModule(module string) error {
-	modules, err := LoadRunningModules()
-	if err != nil {
+	if err := EnsureRuntimeNamespaceForMutation(); err != nil {
 		return err
 	}
 
-	info, ok := modules[module]
-	if !ok {
-		return fmt.Errorf("❌ Module '%s' not found in modules.json", module)
+	registry, err := runtime.LoadRegistry()
+	if err != nil {
+		return fmt.Errorf("cannot load runtime registry: %w", err)
+	}
+	entry, ok := registry[module]
+	if !ok || entry.Host == "" || entry.Port == 0 {
+		return fmt.Errorf("❌ Module '%s' not found in tmp/runtime.json", module)
 	}
 
-	pid, err := utils.DetectPIDFromPort(info.Port)
-	if err != nil {
-		return fmt.Errorf("❌ Failed to detect real PID for module '%s': %w", module, err)
+	if !utils.CheckPortOpen(entry.Host, entry.Port) {
+		if err := runtime.RemoveModuleEntry(module); err != nil {
+			return fmt.Errorf("failed to clean runtime entry for module '%s': %w", module, err)
+		}
+		fmt.Printf("🧹 Module '%s' is not listening on %s:%d; runtime entry removed\n", module, entry.Host, entry.Port)
+		return nil
+	}
+
+	pid, err := utils.DetectPIDFromPort(entry.Port)
+	if err != nil || pid <= 0 {
+		_ = runtime.UpdateRegistry(func(reg runtime.Registry) {
+			current := reg[module]
+			current.PID = 0
+			reg[module] = current
+		})
+		return fmt.Errorf("❌ Module '%s' is reachable on %s:%d but listener PID could not be detected; not stopping an unknown process", module, entry.Host, entry.Port)
 	}
 
 	proc, err := os.FindProcess(pid)
 	if err != nil {
-		return fmt.Errorf("❌ Could not find process: %w", err)
+		return fmt.Errorf("❌ Could not find process %d: %w", pid, err)
 	}
 
 	if err := proc.Kill(); err != nil {
-		return fmt.Errorf("❌ Failed to kill process: %w", err)
+		return fmt.Errorf("❌ Failed to kill PID %d for module '%s': %w", pid, module, err)
 	}
 
-	delete(modules, module)
+	if err := waitForPortClosed(entry.Host, entry.Port, 5*time.Second); err != nil {
+		return fmt.Errorf("❌ Module '%s' PID %d was killed but %s:%d is still reachable: %w", module, pid, entry.Host, entry.Port, err)
+	}
+
+	if err := runtime.RemoveModuleEntry(module); err != nil {
+		return fmt.Errorf("failed to remove runtime entry for module '%s': %w", module, err)
+	}
+
+	fmt.Printf("🛑 Stopped module [%s] on %s:%d (PID: %d)\n", module, entry.Host, entry.Port, pid)
 	return nil
 }
 
+func RestartModule(module string) error {
+	if err := StopModule(module); err != nil {
+		return err
+	}
+	return StartModule(module)
+}
+
 func StopAllModules() error {
-	modules, err := LoadRunningModules()
-	if err != nil {
+	if err := EnsureRuntimeNamespaceForMutation(); err != nil {
 		return err
 	}
 
-	for name := range modules {
-		err := StopModule(name)
-		if err != nil {
+	registry, err := runtime.LoadRegistry()
+	if err != nil {
+		return fmt.Errorf("cannot load runtime registry: %w", err)
+	}
+
+	names := make([]string, 0, len(registry))
+	for name := range registry {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		if err := StopModule(name); err != nil {
 			fmt.Printf("⚠️  Failed to stop module [%s]: %v\n", name, err)
-		} else {
-			fmt.Printf("🛑 Stopped module [%s]\n", name)
 		}
 	}
 	return nil
 }
 
 func SyncRunningModules() error {
-	registry, err := runtime.LoadRegistry()
-	if err != nil {
-		return fmt.Errorf("cannot load registry: %w", err)
+	if err := EnsureRuntimeNamespaceForMutation(); err != nil {
+		return err
 	}
 
-	running := RunningModules{}
-	entries, err := os.ReadDir("modules")
+	entries, err := os.ReadDir(utils.GetFullPath("modules"))
 	if err != nil {
 		return fmt.Errorf("failed to read modules directory: %w", err)
 	}
+
+	runningCount := 0
+	staleCount := 0
+	stoppedCount := 0
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
-		var (
-			host string
-			port int
-		)
-
-		if rm, ok := registry[name]; ok {
-			// Ưu tiên cổng động lấy được khi module start
-			host = rm.Host
-			port = rm.Port
-		} else {
-			// Fallback: đọc config.yaml (có thể port=0)
-			h, p, err := loadModuleConfig(name)
-			if err != nil {
-				fmt.Printf("⚠️  Skipping module '%s': %v\n", name, err)
-				continue
-			}
-			dPort := getDestPort(p)
-			host, port = h, dPort
+		moduleEntry, err := runtime.EnsureModuleEntry(name)
+		if err != nil {
+			fmt.Printf("⚠️  Skipping module '%s': %v\n", name, err)
+			continue
 		}
-		if utils.CheckPortOpen(host, port) {
-			pid, _ := utils.DetectPIDFromPort(port)
-			running[name] = RunningModule{
-				PID:   pid,
-				Host:  host,
-				Port:  port,
-				RunAt: time.Now(),
-			}
-			fmt.Printf("✅ Module '%s' is running on %s:%d (PID: %d)\n", name, host, port, pid)
-		} else {
-			fmt.Printf("🛑 Module '%s' is not running on %s:%d\n", name, host, port)
+
+		status, pid, err := syncModuleState(name, moduleEntry)
+		if err != nil {
+			return err
+		}
+
+		switch status {
+		case "RUNNING":
+			runningCount++
+			fmt.Printf("✅ Module '%s' is running on %s:%d (PID: %d)\n", name, moduleEntry.Host, moduleEntry.Port, pid)
+		case "STALE":
+			staleCount++
+			fmt.Printf("⚠️  Module '%s' is STALE on %s:%d (PID: unknown)\n", name, moduleEntry.Host, moduleEntry.Port)
+		default:
+			stoppedCount++
+			fmt.Printf("🛑 Module '%s' is not running on %s:%d\n", name, moduleEntry.Host, moduleEntry.Port)
 		}
 	}
 
-	err = SaveRunningModules(running)
-	if err != nil {
-		return fmt.Errorf("failed to save modules.json: %w", err)
-	}
-
-	fmt.Printf("🔁 Synced %d modules to tmp/modules.json\n", len(running))
+	fmt.Printf("🔁 Synced runtime registry: %d running, %d stale, %d stopped\n", runningCount, staleCount, stoppedCount)
 	return nil
 }
 
 func ShowStatus() error {
-	running, _ := LoadRunningModules()
-	entries, err := os.ReadDir("modules")
+	entries, err := os.ReadDir(utils.GetFullPath("modules"))
 	if err != nil {
 		return fmt.Errorf("failed to read modules directory: %w", err)
 	}
@@ -232,7 +245,7 @@ func ShowStatus() error {
 			continue
 		}
 		name := entry.Name()
-		host, port, err := loadModuleConfig(name)
+		moduleEntry, err := runtime.ResolveModuleEntry(name)
 		if err != nil {
 			rows = append(rows, moduleRow{
 				Name: name, Host: "-", Port: 0, PID: -1, RunAt: "-", Status: "CONFIG ERROR", Color: "\033[33m",
@@ -242,20 +255,27 @@ func ShowStatus() error {
 
 		status := "STOPPED"
 		pid := -1
+		color := "\033[31m"
 		runAt := "-"
-		color := "\033[31m" // red
+		if !moduleEntry.RunAt.IsZero() {
+			runAt = moduleEntry.RunAt.Format("2006-01-02 15:04:05")
+		}
 
-		if utils.CheckPortOpen(host, port) {
-			status = "RUNNING"
-			pid, _ = utils.DetectPIDFromPort(port)
-			if info, ok := running[name]; ok && !info.RunAt.IsZero() {
-				runAt = info.RunAt.Format("2006-01-02 15:04:05")
+		if utils.CheckPortOpen(moduleEntry.Host, moduleEntry.Port) {
+			detectedPID, err := utils.DetectPIDFromPort(moduleEntry.Port)
+			if err != nil || detectedPID <= 0 {
+				status = "STALE"
+				pid = 0
+				color = "\033[33m"
+			} else {
+				status = "RUNNING"
+				pid = detectedPID
+				color = "\033[32m"
 			}
-			color = "\033[32m" // green
 		}
 
 		rows = append(rows, moduleRow{
-			Name: name, Host: host, Port: port, PID: pid, RunAt: runAt, Status: status, Color: color,
+			Name: name, Host: moduleEntry.Host, Port: moduleEntry.Port, PID: pid, RunAt: runAt, Status: status, Color: color,
 		})
 	}
 
@@ -265,47 +285,55 @@ func ShowStatus() error {
 
 	fmt.Println("\n📦 Module Status:")
 	fmt.Println("----------------------------------------------------------------------------------------")
-	fmt.Printf("%-20s | %-15s | %-5s | %-6s | %-20s | %-6s\n", "Module", "Host", "Port", "PID", "RunAt", "Status")
+	fmt.Printf("%-20s | %-15s | %-5s | %-6s | %-20s | %-12s\n", "Module", "Host", "Port", "PID", "RunAt", "Status")
 	fmt.Println("----------------------------------------------------------------------------------------")
 	for _, r := range rows {
-		fmt.Printf("%-20s | %-15s | %-5d | %-6d | %-20s | %s%-6s\033[0m\n",
+		fmt.Printf("%-20s | %-15s | %-5d | %-6d | %-20s | %s%-12s\033[0m\n",
 			r.Name, r.Host, r.Port, r.PID, r.RunAt, r.Color, r.Status)
 	}
 	fmt.Println("----------------------------------------------------------------------------------------")
 	return nil
 }
 
-func SaveRunningModule(module string, pid int, host string, port int) error {
-	modules, _ := LoadRunningModules() // ignore read error if file doesn't exist
-	modules[module] = RunningModule{
-		PID: pid, Host: host, Port: port, RunAt: time.Now(),
+func syncModuleState(module string, entry runtime.RunningModule) (string, int, error) {
+	if !utils.CheckPortOpen(entry.Host, entry.Port) {
+		err := runtime.UpdateRegistry(func(reg runtime.Registry) {
+			current := reg[module]
+			current.PID = 0
+			current.Host = entry.Host
+			current.Port = entry.Port
+			current.Route = entry.Route
+			current.External = entry.External
+			reg[module] = current
+		})
+		return "STOPPED", 0, err
 	}
-	return SaveRunningModules(modules)
-}
 
-func LoadRunningModules() (RunningModules, error) {
-	path := filepath.Join("tmp", "modules.json")
-	modules := RunningModules{}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return modules, nil // no file yet
-		}
-		return nil, err
+	pid, err := utils.DetectPIDFromPort(entry.Port)
+	if err != nil || pid <= 0 {
+		updateErr := runtime.UpdateRegistry(func(reg runtime.Registry) {
+			current := reg[module]
+			current.PID = 0
+			current.Host = entry.Host
+			current.Port = entry.Port
+			current.Route = entry.Route
+			current.External = entry.External
+			reg[module] = current
+		})
+		return "STALE", 0, updateErr
 	}
-	if err := json.Unmarshal(data, &modules); err != nil {
-		return nil, err
-	}
-	return modules, nil
-}
 
-func SaveRunningModules(modules RunningModules) error {
-	_ = os.MkdirAll("tmp", os.ModePerm)
-	data, err := json.MarshalIndent(modules, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join("tmp", "modules.json"), data, 0644)
+	updateErr := runtime.UpdateRegistry(func(reg runtime.Registry) {
+		current := reg[module]
+		current.PID = pid
+		current.Host = entry.Host
+		current.Port = entry.Port
+		current.Route = entry.Route
+		current.External = entry.External
+		current.RunAt = time.Now()
+		reg[module] = current
+	})
+	return "RUNNING", pid, updateErr
 }
 
 func waitForModuleReady(cmd *exec.Cmd, host string, port int, timeout time.Duration) error {
@@ -331,4 +359,60 @@ func waitForModuleReady(cmd *exec.Cmd, host string, port int, timeout time.Durat
 	}
 
 	return fmt.Errorf("timeout after %s", timeout)
+}
+
+func waitForPortClosed(host string, port int, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if !utils.CheckPortOpen(host, port) {
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("timeout after %s", timeout)
+}
+
+func isInsideContainer() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+
+	data, err := os.ReadFile("/proc/1/cgroup")
+	if err != nil {
+		return false
+	}
+	content := string(data)
+	return strings.Contains(content, "docker") ||
+		strings.Contains(content, "containerd") ||
+		strings.Contains(content, "kubepods")
+}
+
+func composeAPIContainerRunning() (bool, error) {
+	if _, err := exec.LookPath("docker"); err != nil {
+		return false, nil
+	}
+
+	output, err := exec.Command("docker", "compose", "ps", "-q", "api").CombinedOutput()
+	if err != nil {
+		message := strings.TrimSpace(string(output))
+		if message == "" {
+			message = err.Error()
+		}
+		return false, fmt.Errorf("cannot verify Docker Compose API namespace: %s. %s", message, namespaceGuidance)
+	}
+
+	for _, id := range strings.Fields(string(output)) {
+		inspectOutput, err := exec.Command("docker", "inspect", "-f", "{{.State.Running}}", id).CombinedOutput()
+		if err != nil {
+			message := strings.TrimSpace(string(inspectOutput))
+			if message == "" {
+				message = err.Error()
+			}
+			return false, fmt.Errorf("cannot verify Docker Compose API namespace: %s. %s", message, namespaceGuidance)
+		}
+		if strings.TrimSpace(string(inspectOutput)) == "true" {
+			return true, nil
+		}
+	}
+	return false, nil
 }

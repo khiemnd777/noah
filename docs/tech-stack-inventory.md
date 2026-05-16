@@ -111,7 +111,8 @@ flowchart LR
 ## 4. Backend Stack
 
 - Runtime and boot: `api/main.go` loads env/config, configures logging, initializes the DB client, bootstraps Ent, applies SQL migrations, seeds roles/permissions, initializes Redis, circuit breakers, workers, and crons, then starts the gateway.
-- Composition: `api/gateway/runtime/start.go` generates runtime metadata from `api/modules/*`, starts modules through `api/scripts/module_runner/runner`, and reverse-proxies external module routes through Fiber.
+- Composition: `api/gateway/runtime/start.go` generates runtime metadata from `api/modules/*`, writes lifecycle state through `api/shared/runtime/registry.go` to `api/tmp/runtime.json`, starts modules through `api/scripts/module_runner/runner`, and reverse-proxies external module routes through Fiber.
+- Module lifecycle: `api/scripts/module_runner` treats `api/tmp/runtime.json` as the only control-path source of truth for `start`, `stop`, `restart`, `sync`, and `status`; `api/tmp/modules.json` is deprecated and must not be used for lifecycle decisions.
 - Confirmed module set: `attribute`, `auditlog`, `auth`, `folder`, `i18n`, `main`, `metadata`, `notification`, `observability`, `photo`, `profile`, `rbac`, `realtime`, `search`, `token`, and `user`.
 - Auth and permissions: JWT helpers are in `api/shared/utils/jwtutil.go`, request auth middleware is in `api/shared/middleware/auth.go`, and RBAC middleware is in `api/shared/middleware/rbac/rbac.go`.
 - Resilience: `api/shared/app/http_client.go` wraps internal module-to-module HTTP calls with retry logic and `api/shared/circuitbreaker/cb.go`.

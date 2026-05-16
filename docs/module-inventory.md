@@ -19,9 +19,11 @@ This inventory is not a substitute for code inspection. Before editing, verify t
 
 | Runtime / Boundary | Entrypoint | Registry / Loader Source | Evidence |
 | --- | --- | --- | --- |
-| `api` | `api/main.go` | `api/gateway/runtime/start.go`, `api/modules/*/config.yaml` | `api/main.go`, `api/gateway/runtime/start.go` |
+| `api` | `api/main.go` | `api/gateway/runtime/start.go`, `api/modules/*/config.yaml`, `api/tmp/runtime.json` | `api/main.go`, `api/gateway/runtime/start.go`, `api/shared/runtime/registry.go`, `api/scripts/module_runner` |
 | `fe` | `fe/src/main.tsx` | `fe/src/core/index.ts`, `fe/src/features/*/index.tsx` | `fe/src/main.tsx`, `fe/src/core/index.ts` |
 | `.github` / `deploy` | `.github/workflows/deploy.yml` | `deploy/scripts/provision-and-deploy.sh`, `deploy/scripts/render-production-config.sh` | `.github/workflows/deploy.yml`, `deploy/scripts/provision-and-deploy.sh` |
+
+Backend module lifecycle control uses `api/tmp/runtime.json` as the runtime source of truth for `start`, `stop`, `restart`, `sync`, and `status`. `api/tmp/modules.json` is deprecated and is not part of lifecycle control.
 
 ## Backend Top-Level Modules
 

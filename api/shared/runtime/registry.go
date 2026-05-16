@@ -66,6 +66,49 @@ func Register(name, route, host string, port int, external bool) error {
 	})
 }
 
+func ResolveModuleEntry(name string) (RunningModule, error) {
+	reg, err := LoadRegistry()
+	if err != nil {
+		return RunningModule{}, err
+	}
+	if m, ok := reg[name]; ok {
+		return m, nil
+	}
+
+	return moduleEntryFromConfig(name, false)
+}
+
+func EnsureModuleEntry(name string) (RunningModule, error) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	return withRegistryLock(func() (RunningModule, error) {
+		reg, err := loadRegistryUnlocked()
+		if err != nil {
+			return RunningModule{}, err
+		}
+		if m, ok := reg[name]; ok && m.Host != "" && m.Port != 0 {
+			return m, nil
+		}
+
+		entry, err := moduleEntryFromConfig(name, true)
+		if err != nil {
+			return RunningModule{}, err
+		}
+		reg[name] = entry
+		if err := saveRegistryUnlocked(reg); err != nil {
+			return RunningModule{}, err
+		}
+		return entry, nil
+	})
+}
+
+func RemoveModuleEntry(name string) error {
+	return UpdateRegistry(func(reg Registry) {
+		delete(reg, name)
+	})
+}
+
 func getDestPort(port int) int {
 	mCfg, _ := utils.LoadConfig[config.AppConfig](utils.GetAppConfigPath())
 	mPort := mCfg.Server.Port
@@ -219,4 +262,39 @@ func loadServerSection(cfgPath string) (
 	}
 
 	return data, raw.Server.Route, raw.Server.Host, raw.Server.Port, raw.External, nil
+}
+
+func moduleEntryFromConfig(name string, allocateDynamic bool) (RunningModule, error) {
+	cfgFile := utils.GetModuleConfigPath(name)
+	_, route, host, portFromCfg, external, err := loadServerSection(cfgFile)
+	if err != nil {
+		return RunningModule{}, err
+	}
+
+	port := getDestPort(portFromCfg)
+	if portFromCfg == 0 {
+		if !allocateDynamic {
+			return RunningModule{}, fmt.Errorf("module [%s] has dynamic port=0 and no runtime entry", name)
+		}
+
+		r, err := app.FindAvailablePort(host)
+		if err != nil {
+			return RunningModule{}, err
+		}
+		_ = r.Listener.Close()
+		port = r.Port
+	}
+
+	if host == "" || port == 0 {
+		return RunningModule{}, fmt.Errorf("module [%s] has invalid runtime target %s:%d", name, host, port)
+	}
+
+	return RunningModule{
+		PID:      0,
+		Host:     host,
+		Port:     port,
+		Route:    route,
+		RunAt:    time.Now(),
+		External: external,
+	}, nil
 }

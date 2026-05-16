@@ -51,6 +51,19 @@ func ListenOnAvailablePort(host string, port int) (*Reserved, error) {
 	return nil, fmt.Errorf("listen failed: %w", err)
 }
 
+func ListenOnAvailablePortStrict(host string, port int) (*Reserved, error) {
+	if port == 0 {
+		return nil, fmt.Errorf("strict listener requires a non-zero port")
+	}
+
+	l, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(port)))
+	if err != nil {
+		return nil, fmt.Errorf("cannot bind %s:%d: %w", host, port, err)
+	}
+
+	return &Reserved{Listener: l, Port: port}, nil
+}
+
 func FindAvailablePort(host string) (*Reserved, error) {
 	l, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
 	if err != nil {

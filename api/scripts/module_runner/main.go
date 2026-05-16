@@ -16,44 +16,44 @@ func main() {
 	}
 
 	if len(os.Args) < 2 {
-		fmt.Println("❗ Usage: start|start-all|stop|stop-all|sync <module>")
+		fmt.Println("❗ Usage: start|stop|restart <module> | start-all|stop-all|sync|status")
 		os.Exit(1)
 	}
 
 	command := os.Args[1]
 
 	switch command {
-	case "start", "stop":
+	case "start", "stop", "restart":
 		if len(os.Args) < 3 {
 			fmt.Printf("❗ Usage: %s <module>\n", command)
 			os.Exit(1)
 		}
 		module := os.Args[2]
 
-		checkErr(runner.SyncRunningModules())
-		if command == "start" {
+		switch command {
+		case "start":
 			checkErr(runner.StartModule(module))
-		} else {
+			checkErr(runner.SyncRunningModules())
+		case "stop":
 			checkErr(runner.StopModule(module))
+		case "restart":
+			checkErr(runner.RestartModule(module))
+			checkErr(runner.SyncRunningModules())
 		}
-		checkErr(runner.SyncRunningModules())
 	case "start-all":
-		checkErr(runner.SyncRunningModules())
 		dscvrModules, err := utils.DiscoverAllModules()
 		checkErr(err)
 		// checkErr(runner.StartModulesInBatch([]string{"auditlog", "auth", "auth_facebook", "auth_google", "permission"}))
 		checkErr(runner.StartModulesInBatch(dscvrModules))
 		checkErr(runner.SyncRunningModules())
 	case "stop-all":
-		checkErr(runner.SyncRunningModules())
 		checkErr(runner.StopAllModules())
-		checkErr(runner.SyncRunningModules())
 	case "sync":
 		checkErr(runner.SyncRunningModules())
 	case "status":
 		checkErr(runner.ShowStatus())
 	default:
-		fmt.Println("❓ Unknown command. Use: start | stop | sync")
+		fmt.Println("❓ Unknown command. Use: start | stop | restart | start-all | stop-all | sync | status")
 		os.Exit(1)
 	}
 }

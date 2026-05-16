@@ -1,0 +1,7 @@
+interface:
+  display_name: "Noah Fast Triage"
+  short_description: "Find Noah owning files from issues, keywords, screenshots, routes, and logs"
+  default_prompt: "Use $noah-fast-triage to classify these Noah issue signals, search exact evidence first, map the owning files and FE/API boundaries, then propose a verified change plan before editing."
+
+policy:
+  allow_implicit_invocation: true

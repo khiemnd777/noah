@@ -22,6 +22,22 @@ It applies to:
 
 Nested `AGENTS.md` files may add narrower instructions for their own subtree.
 
+## Noah Agent Artifact Source Of Truth
+
+Noah agent and skill artifacts have two distinct locations:
+
+- `agents/**` is the editable source of truth for the Noah-managed agent/skill set.
+- `.codex/**` is repo-local agent/skill runtime or local repo-specific artifact space.
+
+Rules:
+- For Noah-managed skills, edit `agents/skills/<skill-name>/`.
+- For Noah-managed subagents, edit `agents/subagents/<agent-name>.toml`.
+- Do not treat `.codex/**` as the canonical source for Noah-managed artifacts.
+- Before creating or editing Noah-managed skills/subagents, read `agents/skills/README.md`.
+- Repo-managed Noah skills must include `agents/openai.yaml`.
+- Validate with `bash agents/scripts/validate.sh`.
+- Sync to runtime only when explicitly requested or approved, using `bash agents/scripts/sync.sh`.
+
 ## Precedence
 
 Use this order when instructions overlap:
@@ -679,6 +695,11 @@ Do not scan the entire repository without a concrete reason.
 - Do not leave partially wired features.
 - If you add a field or behavior, update all dependent layers.
 - If the repo has tests nearby, update or add them.
+- For any new or changed user-facing string, treat `api/languages/*.xml` as the canonical source of truth.
+- Frontend local fallback dictionaries, inline fallback arguments such as `t("key", "Fallback")`, and component-local constants are not canonical and must never be the only place where a user-facing string is added or changed.
+- If a user-facing string is added or changed in frontend/admin/landing UI, add or update the corresponding canonical key in `api/languages/en.xml` and every existing canonical language file such as `api/languages/vi.xml` in the same change, unless the user explicitly approves a narrower language scope.
+- Do not hardcode user-facing UI text in TS/TSX components when the surrounding flow uses the language resource system. Use an i18n key and keep the fallback text secondary only.
+- Before finalizing any UI or validation change, verify that every new or changed user-facing string has a canonical XML resource and that no new hardcoded user-facing text was introduced.
 - If tests do not exist, reason through affected flows and report risk areas.
 - Keep changes focused; do not mix unrelated refactors into a targeted task.
 - End non-trivial work with a concise regression review.

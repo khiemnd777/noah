@@ -32,11 +32,11 @@ The current theme is defined in `fe/src/app/theme.ts` and should be treated as t
 
 ### Core theme colors
 
-- **Primary Blue**: `#1976d2`
+- **Primary Lavender Plum**: `#8f5fa8`
   Use for primary actions, selected states, emphasis, contained buttons, and interactive highlights.
-- **Secondary Purple**: `#9c27b0`
+- **Secondary Blush Rose**: `#d979a6`
   Use sparingly for secondary accents where an existing MUI component already expects a secondary color role.
-- **App Background**: `#f9f9fb`
+- **App Background**: `#fbf8fc`
   Use for the main application canvas and the large working surface behind cards, panels, and content shells.
 - **Surface White**: `#ffffff`
   Use for paper surfaces, dialogs, tables, cards, and content containers.
@@ -45,6 +45,7 @@ The current theme is defined in `fe/src/app/theme.ts` and should be treated as t
 
 - Use MUI semantic palette roles before inventing raw hex usage.
 - Most screens should be light surfaces on a light app background with subtle separation through borders, dividers, and contained papers.
+- Controlled glass-style color treatment is allowed for the admin app shell and shared frame surfaces when it improves layering without competing with the main work area.
 - Prefer `text.primary`, `text.secondary`, `divider`, and MUI status colors for standard states instead of custom status palettes.
 - Critical or destructive actions should use standard MUI destructive semantics rather than introducing custom warning palettes.
 - Color should support state recognition, not become decoration.
@@ -96,6 +97,7 @@ Use MUI first, then shared primitives from `fe/src/core` and `fe/src/shared`, th
 - Sidebar width behavior should remain practical and compact:
   - expanded for readable labels
   - collapsed for smaller viewports or tighter workflows
+- The shared admin shell may use a soft glass treatment: translucent light surfaces, subtle lavender/blush/powder-blue gradients, low-opacity glow layers, restrained backdrop blur, and fine borders. Keep the main content area visually dominant.
 
 ### Toolbars and headers
 
@@ -112,6 +114,7 @@ Use MUI first, then shared primitives from `fe/src/core` and `fe/src/shared`, th
 - Prefer MUI `Paper`, dialogs, cards, and section containers with white surfaces on the app background.
 - Keep corners moderately rounded, aligned with the theme border radius of `8px`.
 - Surfaces should separate information through spacing, borders, and dividers more than through heavy color fills.
+- Do not apply glass treatment indiscriminately to data cards, tables, forms, or dialogs. Those surfaces should remain clear, readable, and focused unless a shared shell-level pattern explicitly owns the treatment.
 
 ### Forms
 
@@ -193,6 +196,7 @@ Depth should be subtle and functional.
   - dialogs above page content
   - sidebar as a persistent structural surface
   - cards or papers to separate sections from the app background
+- Glass effects, when used, should stay soft and functional: low contrast gradients, gentle blur, and minimal shadows. Avoid saturated color bands that pull attention away from the work surface.
 
 Avoid glossy, floating, or cinematic depth treatments. This application should feel stable, not theatrical.
 
@@ -207,11 +211,12 @@ Avoid glossy, floating, or cinematic depth treatments. This application should f
 - Use explicit states for loading, errors, empty results, and confirmation flows.
 - Keep labels human-readable and operationally clear.
 - Preserve consistency between list pages, detail pages, and dialog workflows.
+- Use the approved admin-shell glass palette only through shared shell/theme layers, not feature-local visual experiments.
 
 ### Don't
 
 - Do not invent a separate visual system for one screen or one feature.
-- Do not use gradients, glassmorphism, landing-page hero treatments, glow effects, or decorative visual noise.
+- Do not use gradients, glassmorphism, glow effects, or decorative visual noise inside individual feature pages unless the shared admin shell pattern owns it. Do not use landing-page hero treatments in the admin UI.
 - Do not replace shared form or table infrastructure with bespoke patterns unless the repo already requires it.
 - Do not scatter actions across the page when a toolbar or dialog footer is the established place.
 - Do not expose raw DTO field names, transport-shaped labels, or backend structure directly in UI copy.
@@ -256,7 +261,7 @@ Use these rules when generating or refactoring UI in this repo.
 - Build an internal admin UI, not a marketing site.
 - Use MUI and existing shared frontend primitives.
 - Keep the app light-themed, operational, and data-oriented.
-- Use `#1976d2` as the main action color and `#f9f9fb` as the app background.
+- Use `#8f5fa8` as the main action color and `#fbf8fc` as the app background.
 - Prefer white surfaces, moderate rounding, compact spacing, and strong information hierarchy.
 - Default to shared page shells, auto-form patterns, schema-table patterns, and right-aligned page actions.
 
@@ -285,4 +290,4 @@ Use these rules when generating or refactoring UI in this repo.
 
 **Dashboard card section**
 
-> Build a dashboard section for an internal admin screen using MUI surfaces and the current Noah design language. Keep the cards restrained, readable, and data-first. Use subtle separation, compact spacing, and clear labels. Do not use gradients, glassmorphism, or promotional styling.
+> Build a dashboard section for an internal admin screen using MUI surfaces and the current Noah design language. Keep the cards restrained, readable, and data-first. Use subtle separation, compact spacing, and clear labels. Do not add feature-local gradients, glassmorphism, or promotional styling inside the dashboard cards.
